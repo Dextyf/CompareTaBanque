@@ -8,21 +8,28 @@ import Dashboard from './pages/Dashboard';
 import SimulateurEpargne from './pages/SimulateurEpargne';
 import ComparisonResults from './pages/ComparisonResults';
 import AdminLayout from './pages/admin/AdminDashboard';
+import { supabase } from './lib/supabaseClient';
 
 const ProtectedRoute = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(null); // null = chargement en cours
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const adminToken = localStorage.getItem('admin_token');
-    if (token || adminToken) {
-      setIsAuthenticated(true);
-    }
-    setLoading(false);
+    // Vérification initiale de la session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+    });
+
+    // Écoute des changements d'état d'auth (connexion / déconnexion)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) return <div className="h-screen flex items-center justify-center font-black text-fintech-blue">Chargement Sécurisé...</div>;
+  if (isAuthenticated === null) {
+    return <div className="h-screen flex items-center justify-center font-black text-fintech-blue">Chargement Sécurisé...</div>;
+  }
 
   return isAuthenticated ? children : <Navigate to="/auth" />;
 };

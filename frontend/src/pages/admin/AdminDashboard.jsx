@@ -1,31 +1,37 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Users, CreditCard, Lock, Activity, TrendingUp, AlertTriangle, LogOut } from 'lucide-react';
 import LeadsManager from './LeadsManager';
 import Transactions from './Transactions';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const currentAdmin = localStorage.getItem('admin_token');
-
-  const handleLogout = () => {
-    // Record logout time in the session tracking
-    const currentSession = JSON.parse(localStorage.getItem('current_admin_session') || '{}');
-    if (currentSession.admin_id) {
-      currentSession.logout_time = new Date().toLocaleString('fr-FR');
-      localStorage.setItem('current_admin_session', JSON.stringify(currentSession));
-      localStorage.setItem('previous_admin_session', JSON.stringify(currentSession));
-    }
-    localStorage.removeItem('admin_token');
-    navigate('/auth'); // Retour à la page de connexion unifiée
-  };
+  const [currentAdmin, setCurrentAdmin] = useState(null);
 
   useEffect(() => {
-    if (!currentAdmin) {
-      navigate('/auth');
-    }
-  }, [currentAdmin, navigate]);
+    // Récupère la session Supabase active
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setCurrentAdmin(session.user.email);
+      } else {
+        navigate('/auth');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) navigate('/auth');
+      else setCurrentAdmin(session.user.email);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+  };
 
   if (!currentAdmin) return null;
 

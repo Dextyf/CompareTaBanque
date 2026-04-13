@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, LogOut, FileText, Settings, User, ShieldCheck, Menu, X, ChevronRight, TrendingUp, Sparkles, PieChart } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+
 import Chatbot from '../components/Chatbot';
 import SelectiveComparison from './SelectiveComparison';
 
@@ -26,9 +27,8 @@ export default function Dashboard() {
     fetchUserData();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    sessionStorage.removeItem('access_token');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     navigate('/auth');
   };
 

@@ -72,8 +72,8 @@ export default function ProspectForm() {
     setIsSubmitting(true);
 
     try {
-      // 1. Sauvegarde dans Supabase
-      const { error } = await supabase
+      // 1. Sauvegarde dans Supabase — on récupère l'ID créé
+      const { data, error } = await supabase
         .from('prospects')
         .insert({
           email: formData.email,
@@ -85,13 +85,27 @@ export default function ProspectForm() {
           needs_credit: formData.needs_credit,
           consent_given: true,
           consent_date: new Date().toISOString()
-        });
+        })
+        .select('id')
+        .single();
 
-      if (error && error.code !== '23505') throw error;
+      let prospectId = data?.id;
 
-      // 2. Navigation vers résultats avec un petit délai pour le "UX Scoring"
+      // Email déjà existant → on récupère l'ID du prospect existant
+      if (error?.code === '23505') {
+        const { data: existing } = await supabase
+          .from('prospects')
+          .select('id')
+          .eq('email', formData.email)
+          .single();
+        prospectId = existing?.id;
+      } else if (error) {
+        throw error;
+      }
+
+      // 2. Navigation vers résultats — on passe l'ID prospect pour la création du lead
       setTimeout(() => {
-        navigate('/results', { state: { profile: formData } });
+        navigate('/results', { state: { profile: formData, prospect_id: prospectId } });
       }, 2500);
 
     } catch (err) {

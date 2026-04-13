@@ -1,11 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { 
-  CheckCircle2, TrendingUp, Sparkles, Building2, ChevronRight, Check, Trophy, 
-  MessageSquare, ShieldAlert, Zap, Percent, ShieldCheck, Info, ArrowUpRight, 
-  HelpCircle, MoreHorizontal, Activity, CreditCard, Wallet, Landmark
+import {
+  CheckCircle2, TrendingUp, Sparkles, Building2, ChevronRight, Check, Trophy,
+  MessageSquare, ShieldAlert, Zap, Percent, ShieldCheck, Info, ArrowUpRight,
+  HelpCircle, MoreHorizontal, Activity, CreditCard, Wallet, Landmark, Loader2
 } from 'lucide-react';
+
+const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
+
+function getIncomeBracket(income) {
+  const n = parseInt(income || 0);
+  if (n <= 250000)  return '0-250k';
+  if (n <= 600000)  return '250k-600k';
+  if (n <= 800000)  return '600k-800k';
+  if (n <= 1200000) return '800k-1200k';
+  return '1200k+';
+}
 
 export default function ComparisonResults() {
   const location = useLocation();
@@ -27,6 +38,8 @@ export default function ComparisonResults() {
   const [analyzing, setAnalyzing] = useState(true);
   const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [leadConfirmed, setLeadConfirmed] = useState(null); // { name, code } de la banque choisie
 
   useEffect(() => {
     const timer = setTimeout(() => setAnalyzing(false), 3200);
@@ -178,10 +191,94 @@ export default function ComparisonResults() {
   const displayMontant = !isNaN(parseInt(profile.montant_demande)) ? parseInt(profile.montant_demande).toLocaleString() : 'N/A';
   const displayProfil = profile.company_type === 'PME' ? 'PME/ENT' : 'PARTICULIER';
 
-  const handleSelectBank = (bankName) => {
-    alert(`Excellent choix ! Votre dossier v2.0 a été préparé pour ${bankName}.`);
-    navigate('/auth');
+  const handleSelectBank = async (rec) => {
+    if (submitting) return;
+    setSubmitting(true);
+
+    const income = parseInt(profile.monthly_income || (profile.chiffre_affaires / 12) || 0);
+    const payload = {
+      prospect_id:      location.state?.prospect_id || null,
+      bank_id:          rec.id,
+      bank_name:        rec.name,
+      bank_code:        rec.code,
+      income_bracket:   getIncomeBracket(income),
+      profile_snapshot: {
+        full_name:       profile.full_name,
+        email:           profile.email,
+        phone:           profile.phone,
+        monthly_income:  income,
+        company_type:    profile.company_type,
+        needs_credit:    profile.needs_credit,
+        montant_demande: profile.montant_demande || null,
+        type_credit:     profile.type_credit || null,
+      },
+    };
+
+    try {
+      if (N8N_WEBHOOK_URL) {
+        await fetch(N8N_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+    } catch (err) {
+      // Le webhook est indisponible — on ne bloque pas l'UX
+      console.warn('N8N webhook non joignable:', err.message);
+    } finally {
+      setSubmitting(false);
+      setLeadConfirmed({ name: rec.name, code: rec.code });
+    }
   };
+
+  // ── Modal de confirmation lead envoyé ─────────────────────────
+  if (leadConfirmed) {
+    return (
+      <div className="min-h-screen bg-fintech-dark flex items-center justify-center p-6 font-sans">
+        <div className="bg-white rounded-[4rem] shadow-2xl p-14 max-w-lg w-full text-center">
+          <div className="w-24 h-24 bg-fintech-accent/15 rounded-full flex items-center justify-center mx-auto mb-8">
+            <CheckCircle2 size={52} className="text-fintech-accent" />
+          </div>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-fintech-accent mb-4">Dossier transmis</p>
+          <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight leading-tight">
+            Votre demande a été envoyée à<br />
+            <span className="text-fintech-blue">{leadConfirmed.name}</span>
+          </h2>
+          <p className="text-slate-500 font-bold leading-relaxed mb-10">
+            Un conseiller de la banque vous contactera dans les <span className="text-slate-800">48 heures</span> aux coordonnées que vous avez fournies.
+          </p>
+          <div className="bg-slate-50 rounded-[2rem] p-6 mb-10 text-left space-y-3">
+            <div className="flex items-center gap-3 text-sm font-bold text-slate-600">
+              <CheckCircle2 size={16} className="text-fintech-accent shrink-0" />
+              Dossier transmis via notre réseau sécurisé
+            </div>
+            <div className="flex items-center gap-3 text-sm font-bold text-slate-600">
+              <CheckCircle2 size={16} className="text-fintech-accent shrink-0" />
+              Délai de réponse garanti : 48h maximum
+            </div>
+            <div className="flex items-center gap-3 text-sm font-bold text-slate-600">
+              <CheckCircle2 size={16} className="text-fintech-accent shrink-0" />
+              Notification par email et téléphone
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={() => navigate('/')}
+              className="flex-1 py-5 rounded-[2rem] border-2 border-slate-200 font-black text-slate-600 hover:bg-slate-50 transition-all"
+            >
+              Retour à l'accueil
+            </button>
+            <button
+              onClick={() => navigate('/auth')}
+              className="flex-1 py-5 rounded-[2rem] bg-fintech-blue text-white font-black hover:bg-black transition-all"
+            >
+              Créer mon compte
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-32 overflow-x-hidden">
@@ -293,15 +390,19 @@ export default function ComparisonResults() {
                      ))}
                    </div>
 
-                   <button 
-                     onClick={() => handleSelectBank(rec.name)}
-                     className={`w-full py-7 rounded-[3rem] font-black text-2xl transition-all shadow-xl active:scale-95 ${
-                       index === 0 
-                         ? 'bg-fintech-blue text-white hover:bg-black border-b-8 border-slate-800' 
+                   <button
+                     onClick={() => handleSelectBank(rec)}
+                     disabled={submitting}
+                     className={`w-full py-7 rounded-[3rem] font-black text-2xl transition-all shadow-xl active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3 ${
+                       index === 0
+                         ? 'bg-fintech-blue text-white hover:bg-black border-b-8 border-slate-800'
                          : 'bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50'
                      }`}
                    >
-                     {profile.needs_credit === 'no' ? 'Ouvrir mon compte' : 'Choisir cette banque'}
+                     {submitting
+                       ? <><Loader2 size={22} className="animate-spin" /> Envoi en cours...</>
+                       : profile.needs_credit === 'no' ? 'Ouvrir mon compte' : 'Choisir cette banque'
+                     }
                    </button>
                  </div>
                </div>

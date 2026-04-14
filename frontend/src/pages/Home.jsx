@@ -15,7 +15,7 @@ export default function Home() {
         <div className="flex items-center gap-4 md:gap-8 text-sm md:text-base font-bold">
           <button onClick={() => navigate('/auth')} className="text-slate-300 hover:text-white transition-all uppercase tracking-widest text-[10px] md:text-xs">Connexion</button>
           <button 
-            onClick={() => navigate('/consent')}
+            onClick={() => navigate('/auth')}
             className="bg-fintech-accent text-white px-6 md:px-8 py-3 rounded-full hover:bg-black transition-all shadow-xl text-xs md:text-sm uppercase tracking-widest font-black"
           >
             Trouver ma banque
@@ -76,7 +76,7 @@ export default function Home() {
              <div className="p-8 md:p-10">
                 <h3 className="text-3xl font-black mb-4">Pour Particuliers</h3>
                 <p className="text-slate-400 mb-8 font-medium">Optimisez vos frais, trouvez le meilleur taux de Crédit Immobilier et profitez d'une épargne optimale.</p>
-                <button onClick={() => navigate('/consent')} className="text-white bg-white/10 hover:bg-fintech-accent px-8 py-4 rounded-2xl font-black transition-all flex items-center gap-3">
+                <button onClick={() => navigate('/auth')} className="text-white bg-white/10 hover:bg-fintech-accent px-8 py-4 rounded-2xl font-black transition-all flex items-center gap-3">
                    Simulation Personnelle <ChevronRight size={20} />
                 </button>
              </div>
@@ -90,7 +90,7 @@ export default function Home() {
              <div className="p-8 md:p-10">
                 <h3 className="text-3xl font-black mb-4">Pour Entreprises</h3>
                 <p className="text-slate-400 mb-8 font-medium">SARL, SA ou SNC : accédez aux meilleures grilles de crédit business et facilitez votre trésorerie.</p>
-                <button onClick={() => navigate('/consent')} className="text-white bg-white/10 hover:bg-fintech-blue px-8 py-4 rounded-2xl font-black transition-all flex items-center gap-3">
+                <button onClick={() => navigate('/auth')} className="text-white bg-white/10 hover:bg-fintech-blue px-8 py-4 rounded-2xl font-black transition-all flex items-center gap-3">
                    Analyse Corporate <ChevronRight size={20} />
                 </button>
              </div>

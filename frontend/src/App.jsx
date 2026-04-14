@@ -39,9 +39,21 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/consent" element={<ConsentGate />} />
-        <Route path="/comparateur" element={<ProspectForm />} />
-        <Route path="/results" element={<ComparisonResults />} />
+        <Route path="/consent" element={
+          <ProtectedRoute>
+            <ConsentGate />
+          </ProtectedRoute>
+        } />
+        <Route path="/comparateur" element={
+          <ProtectedRoute>
+            <ProspectForm />
+          </ProtectedRoute>
+        } />
+        <Route path="/results" element={
+          <ProtectedRoute>
+            <ComparisonResults />
+          </ProtectedRoute>
+        } />
         <Route path="/auth" element={<Auth />} />
 
         <Route path="/dashboard/*" element={

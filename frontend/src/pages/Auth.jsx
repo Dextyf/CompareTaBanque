@@ -39,6 +39,20 @@ export default function Auth() {
     }
   }, []);
 
+  // Si l'utilisateur est déjà connecté, on le redirige vers le tunnel consentement
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        const email = session.user?.email?.toLowerCase();
+        if (email && ADMIN_EMAILS.includes(email)) {
+          navigate('/admin');
+        } else {
+          navigate('/consent');
+        }
+      }
+    });
+  }, [navigate]);
+
   const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }));
 
   const switchMode = (next) => { setMode(next); setMessage(null); setForm({ email: '', password: '', confirmPassword: '' }); };
@@ -58,7 +72,7 @@ export default function Auth() {
 
         ADMIN_EMAILS.includes(data.user.email.toLowerCase())
           ? navigate('/admin')
-          : navigate('/dashboard');
+          : navigate('/consent');
 
       } else {
         // Inscription
@@ -70,7 +84,7 @@ export default function Auth() {
 
         if (data.session) {
           // Email confirmation désactivée dans Supabase → session immédiate
-          navigate('/dashboard');
+          navigate('/consent');
         } else {
           setMessage({ type: 'success', text: 'Compte créé ! Vérifiez votre email pour confirmer votre inscription, puis connectez-vous.' });
           switchMode('login');
@@ -120,8 +134,8 @@ export default function Auth() {
       if (error) throw error;
       // Nettoyer le hash Supabase de l'URL
       window.history.replaceState(null, '', window.location.pathname);
-      setMessage({ type: 'success', text: 'Mot de passe mis à jour avec succès ! Redirection...' });
-      setTimeout(() => navigate('/dashboard'), 1800);
+      setMessage({ type: 'success', text: 'Mot de passe mis à jour avec succès ! Redirection vers la connexion...' });
+      setTimeout(() => navigate('/auth'), 1800);
     } catch (err) {
       setMessage({ type: 'error', text: translateError(err.message) });
     } finally {
@@ -208,6 +222,7 @@ export default function Auth() {
                 <AuthInput
                   id="email" label="Email" name="email" type="email"
                   placeholder="email@exemple.com"
+                  value={form.email}
                   onChange={set('email')} icon={<Mail size={22} />}
                 />
                 <div>
@@ -226,6 +241,7 @@ export default function Auth() {
                     </div>
                     <input
                       type="password" name="password" required minLength={6}
+                      value={form.password}
                       onChange={set('password')}
                       className="w-full pl-16 pr-6 py-5 md:py-6 bg-slate-50 border-2 border-slate-100 rounded-3xl md:rounded-[2rem] focus:border-fintech-blue focus:bg-white outline-none transition-all font-black text-slate-800 tracking-[0.4em] placeholder:tracking-widest"
                       placeholder="••••••••"
@@ -244,6 +260,7 @@ export default function Auth() {
               <AuthInput
                 id="forgot_email" label="Votre adresse email" name="email" type="email"
                 placeholder="email@exemple.com"
+                value={form.email}
                 onChange={set('email')} icon={<Mail size={22} />}
               />
               <SubmitButton loading={loading} label="Envoyer le lien" />
@@ -255,11 +272,11 @@ export default function Auth() {
             <form className="space-y-8" onSubmit={handleResetPassword}>
               <AuthInput
                 id="new_password" label="Nouveau mot de passe" name="password" type="password"
-                placeholder="••••••••" onChange={set('password')} icon={<KeyRound size={22} />}
+                placeholder="••••••••" value={form.password} onChange={set('password')} icon={<KeyRound size={22} />}
               />
               <AuthInput
                 id="confirm_password" label="Confirmer le mot de passe" name="confirmPassword" type="password"
-                placeholder="••••••••" onChange={set('confirmPassword')} icon={<KeyRound size={22} />}
+                placeholder="••••••••" value={form.confirmPassword} onChange={set('confirmPassword')} icon={<KeyRound size={22} />}
               />
               <SubmitButton loading={loading} label="Enregistrer le mot de passe" />
             </form>
@@ -303,14 +320,14 @@ function SubmitButton({ loading, label }) {
   );
 }
 
-function AuthInput({ label, name, placeholder, onChange, icon, type = 'text', id }) {
+function AuthInput({ label, name, placeholder, onChange, icon, type = 'text', id, value }) {
   return (
     <div className="w-full">
       <label htmlFor={id} className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2.5 ml-2">{label}</label>
       <div className="relative group">
         <div className="absolute left-5 top-5 text-slate-300 group-focus-within:text-fintech-blue transition-colors">{icon}</div>
         <input
-          id={id} type={type} name={name} required onChange={onChange}
+          id={id} type={type} name={name} required value={value} onChange={onChange}
           className="w-full pl-16 pr-6 py-5 md:py-6 bg-slate-50 border-2 border-slate-100 rounded-3xl md:rounded-[2rem] focus:border-fintech-blue focus:bg-white outline-none transition-all font-black text-slate-800 placeholder:font-bold placeholder:text-slate-300"
           placeholder={placeholder}
         />

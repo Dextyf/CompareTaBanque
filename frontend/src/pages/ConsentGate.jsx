@@ -13,10 +13,10 @@ export default function ConsentGate() {
 
   const isContinuerDisabled = !consents.case1 || !consents.case2;
 
-  const handleConsentChange = (caseName) => {
+  const handleConsentChange = (caseName, checked) => {
     setConsents(prev => ({
       ...prev,
-      [caseName]: !prev[caseName]
+      [caseName]: typeof checked === 'boolean' ? checked : !prev[caseName]
     }));
   };
 
@@ -52,7 +52,7 @@ export default function ConsentGate() {
                   id="case1"
                   type="checkbox"
                   checked={consents.case1}
-                  onChange={() => handleConsentChange('case1')}
+                  onChange={(event) => handleConsentChange('case1', event.target.checked)}
                   className="w-5 h-5 text-fintech-blue bg-white border-slate-300 rounded focus:ring-fintech-blue cursor-pointer"
                 />
               </div>
@@ -73,7 +73,7 @@ export default function ConsentGate() {
                   id="case2"
                   type="checkbox"
                   checked={consents.case2}
-                  onChange={() => handleConsentChange('case2')}
+                  onChange={(event) => handleConsentChange('case2', event.target.checked)}
                   className="w-5 h-5 text-fintech-blue bg-white border-slate-300 rounded focus:ring-fintech-blue cursor-pointer"
                 />
               </div>
@@ -96,7 +96,7 @@ export default function ConsentGate() {
                   id="case3"
                   type="checkbox"
                   checked={consents.case3}
-                  onChange={() => handleConsentChange('case3')}
+                  onChange={(event) => handleConsentChange('case3', event.target.checked)}
                   className="w-5 h-5 text-fintech-accent bg-white border-slate-300 rounded focus:ring-fintech-accent cursor-pointer"
                 />
               </div>
@@ -114,7 +114,7 @@ export default function ConsentGate() {
                   id="case4"
                   type="checkbox"
                   checked={consents.case4}
-                  onChange={() => handleConsentChange('case4')}
+                  onChange={(event) => handleConsentChange('case4', event.target.checked)}
                   className="w-5 h-5 text-fintech-accent bg-white border-slate-300 rounded focus:ring-fintech-accent cursor-pointer"
                 />
               </div>

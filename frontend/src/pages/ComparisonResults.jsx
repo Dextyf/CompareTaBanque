@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { scoreBanks } from '../lib/scoring';
 import {
   CheckCircle2, TrendingUp, Sparkles, Building2, ChevronRight, Check, Trophy,
   MessageSquare, ShieldAlert, Zap, Percent, ShieldCheck, Info, ArrowUpRight,
@@ -62,35 +63,15 @@ export default function ComparisonResults() {
 
         if (data) {
           const mapped = data.map(b => {
-            const target = profile.company_type === 'individual' ? 'particulier' : 'entreprise';
-            const validTariffs = b.banking_tariffs.filter(t => t.target_profile === target || t.target_profile === 'mixte');
-            const t = validTariffs[0] || b.banking_tariffs[0] || {};
-
-            // Correction spécifique logo SGCI
             const logoPath = b.code === 'SGCI' ? '/logos/sgbci.png' : `/logos/${b.code.toLowerCase()}.png`;
-
-            // Construction dynamique des Pros
-            const dynamicPros = [];
-            if (t.has_mobile_banking) dynamicPros.push('App Mobile incluse');
-            if (t.has_visa_card) dynamicPros.push('Carte VISA active');
-            if (t.has_online_banking) dynamicPros.push('Accès web 24/7');
-            if (t.has_insurance) dynamicPros.push('Assurance incluse');
-            if (dynamicPros.length < 3) dynamicPros.push('Service Client 5*');
-
             return {
               id: b.id,
               code: b.code,
               name: b.name,
               logo: logoPath,
-              credit_access_pme: b.reliability_score / 5,
-              credit_access_fonct: b.reliability_score / 5 - 1,
-              credit_access_salarie: b.reliability_score / 5 - 2,
-              taux_base_credit: 8.5, 
-              score_partenariats: b.reliability_score > 80 ? 12 : 10,
-              score_autonomie_base: t.has_online_banking ? 12 : 8,
-              visa_detail: t.has_visa_card ? (t.has_international ? 'VISA Internationale' : 'VISA Classic') : 'Standard',
-              fees_detail: t.monthly_fee > 0 ? `Pack: ${t.monthly_fee}F/mois` : 'Compte Gratuit',
-              pros: dynamicPros.slice(0, 3)
+              reliability_score: b.reliability_score || 0,
+              banking_tariffs: b.banking_tariffs || [],
+              is_partner: b.is_partner,
             };
           });
           setBanks(mapped);
@@ -183,8 +164,7 @@ export default function ComparisonResults() {
     };
   }
 
-  const recs = banks
-    .map(b => scoringBancaireComplet(b, profile))
+  const recs = scoreBanks(banks, profile)
     .sort((a, b) => b.score - a.score)
     .slice(0, 3);
 
@@ -344,6 +324,12 @@ export default function ComparisonResults() {
                          <p className="text-[14px] font-bold text-slate-700 italic leading-relaxed">
                            "{rec.comment}"
                          </p>
+                         <div className="mt-4 text-[11px] text-slate-500 space-y-2">
+                           <p>Accès: <span className="font-black text-slate-700">{rec.scoreBreakdown.access}</span> / 30</p>
+                           <p>Coût: <span className="font-black text-slate-700">{rec.scoreBreakdown.cost}</span> / 30</p>
+                           <p>Services: <span className="font-black text-slate-700">{rec.scoreBreakdown.service}</span> / 20</p>
+                           <p>Confiance: <span className="font-black text-slate-700">{rec.scoreBreakdown.trust}</span> / 20</p>
+                         </div>
                       </div>
                    </div>
 

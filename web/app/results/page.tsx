@@ -351,7 +351,7 @@ function ResultsContent() {
 
             <p className="text-center text-[10px] text-slate-400 font-bold mt-4 flex items-center justify-center gap-1">
               <ShieldCheck size={12} className="text-[color:var(--color-fintech-accent)]" />
-              Données sécurisées
+              Conforme aux standards BCEAO
             </p>
           </div>
         </div>
@@ -450,7 +450,7 @@ function ResultsContent() {
 
         <div className="mt-20 text-center opacity-70 px-6">
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] leading-relaxed max-w-2xl mx-auto">
-            Données sécurisées · Plateforme de Conseil Financier Indépendante · Zone UEMOA
+            Conforme aux standards BCEAO · Plateforme de Conseil Financier Indépendante · Zone UEMOA
           </p>
         </div>
       </div>

@@ -596,7 +596,7 @@ export default function ProspectFormPage() {
                 </button>
                 <p className="text-center text-[10px] font-black uppercase text-slate-400 tracking-widest mt-8 flex items-center justify-center gap-2">
                   <ShieldCheck size={14} className="text-[color:var(--color-fintech-accent)]" />
-                  Données sécurisées
+                  Conforme aux standards BCEAO
                 </p>
               </div>
             </Section>

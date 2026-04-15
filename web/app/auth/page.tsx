@@ -1,0 +1,397 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Shield, KeyRound, Mail, ChevronLeft, ShieldCheck,
+  ArrowRight, CheckCircle2, AlertCircle, Loader2,
+} from 'lucide-react';
+import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
+
+const ADMIN_EMAILS = [
+  'sakidesireluc@gmail.com',
+  'arriko199@gmail.com',
+  'jeanenockguikan@gmail.com',
+];
+
+function translateError(msg?: string) {
+  if (!msg) return 'Une erreur inattendue est survenue.';
+  if (msg.includes('Invalid login credentials'))   return 'Email ou mot de passe incorrect.';
+  if (msg.includes('Email not confirmed'))          return 'Email non confirmé. Vérifiez votre boîte mail.';
+  if (msg.includes('User already registered'))      return 'Ce compte existe déjà. Connectez-vous.';
+  if (msg.includes('Password should be at least')) return 'Le mot de passe doit contenir au moins 6 caractères.';
+  if (msg.includes('over_email_send_rate_limit'))  return 'Trop d\'emails envoyés. Réessayez dans quelques minutes.';
+  if (msg.includes('rate limit'))                  return 'Trop de tentatives. Réessayez dans quelques minutes.';
+  if (msg.includes('Email link is invalid'))       return 'Le lien a expiré. Recommencez la réinitialisation.';
+  if (msg.includes('Auth session missing'))        return 'Session expirée. Recommencez depuis votre email.';
+  return msg;
+}
+
+type Mode = 'login' | 'signup' | 'forgot' | 'reset';
+type Msg  = { type: 'success' | 'error'; text: string };
+
+export default function AuthPage() {
+  const router  = useRouter();
+  const supabase = createClient();
+
+  const [mode,       setMode]       = useState<Mode>('login');
+  const [loading,    setLoading]    = useState(false);
+  const [message,    setMessage]    = useState<Msg | null>(null);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [form,       setForm]       = useState({ email: '', password: '', confirmPassword: '' });
+
+  // Détection lien recovery dans le hash
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash.includes('type=recovery') || hash.includes('type=email_change')) {
+        setMode('reset');
+      }
+    }
+  }, []);
+
+  // Redirige si déjà connecté
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const email = session.user.email?.toLowerCase() ?? '';
+        if (ADMIN_EMAILS.includes(email)) { router.push('/admin'); return; }
+        const hasConsent = localStorage.getItem(`ctb_consent_${session.user.id}`) === 'granted';
+        router.push(hasConsent ? '/' : '/consent');
+      }
+    });
+  }, []);
+
+  const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm(prev => ({ ...prev, [field]: e.target.value }));
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setMessage(null);
+    setForm({ email: '', password: '', confirmPassword: '' });
+  };
+
+  /* ── Connexion / Inscription ──────────────────────────────── */
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+    try {
+      if (mode === 'login') {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email:    form.email.trim().toLowerCase(),
+          password: form.password,
+        });
+        if (error) throw error;
+        const uid   = data.user.id;
+        const email = data.user.email?.toLowerCase() ?? '';
+
+        // Mémorisation de session
+        if (rememberMe) {
+          localStorage.setItem(`ctb_remember_${uid}`, 'true');
+        } else {
+          localStorage.removeItem(`ctb_remember_${uid}`);
+        }
+        // Marquer l'onglet actif
+        sessionStorage.setItem(`ctb_tab_${uid}`, 'true');
+
+        if (ADMIN_EMAILS.includes(email)) { router.push('/admin'); return; }
+
+        // Vérifier consentement existant → éviter de le redemander
+        const hasConsent = localStorage.getItem(`ctb_consent_${uid}`) === 'granted';
+        router.push(hasConsent ? '/' : '/consent');
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email:    form.email.trim().toLowerCase(),
+          password: form.password,
+        });
+        if (error) throw error;
+        if (data.session) {
+          router.push('/consent');
+        } else {
+          setMessage({ type: 'success', text: 'Compte créé ! Vérifiez votre email pour confirmer votre inscription.' });
+          switchMode('login');
+        }
+      }
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: translateError((err as Error).message) });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ── Mot de passe oublié ─────────────────────────────────── */
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        form.email.trim().toLowerCase(),
+        { redirectTo: `${window.location.origin}/auth` }
+      );
+      if (error) throw error;
+      setMessage({ type: 'success', text: 'Lien de réinitialisation envoyé ! Vérifiez votre boîte mail (et vos spams).' });
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: translateError((err as Error).message) });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ── Nouveau mot de passe ────────────────────────────────── */
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (form.password !== form.confirmPassword) {
+      setMessage({ type: 'error', text: 'Les mots de passe ne correspondent pas.' });
+      return;
+    }
+    if (form.password.length < 6) {
+      setMessage({ type: 'error', text: 'Le mot de passe doit contenir au moins 6 caractères.' });
+      return;
+    }
+    setLoading(true);
+    setMessage(null);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: form.password });
+      if (error) throw error;
+      window.history.replaceState(null, '', window.location.pathname);
+      setMessage({ type: 'success', text: 'Mot de passe mis à jour ! Redirection...' });
+      setTimeout(() => router.push('/auth'), 1800);
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: translateError((err as Error).message) });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sidePanel: Record<Mode, { title: string; sub: string }> = {
+    login:  { title: 'Accès Sécurisé.',      sub: 'Gérez vos analyses bancaires avec la protection SSL renforcée intégrée.' },
+    signup: { title: 'Créez votre accès.',   sub: 'Rejoignez des milliers de clients qui ont trouvé leur banque idéale en CI.' },
+    forgot: { title: 'Récupération.',        sub: 'Entrez votre email et recevez un lien de réinitialisation sécurisé.' },
+    reset:  { title: 'Nouveau mot de passe.', sub: 'Choisissez un mot de passe fort pour sécuriser votre accès.' },
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row font-sans overflow-x-hidden">
+
+      {/* ── Panneau gauche ────────────────────────────────────── */}
+      <div className="lg:w-1/2 xl:w-2/5 bg-[color:var(--color-fintech-dark)] relative overflow-hidden flex flex-col items-center justify-center p-10 md:p-20 order-2 lg:order-1 min-h-[300px] lg:min-h-screen">
+        <div className="absolute inset-0 z-0">
+          <Image src="/assets/auth_side.png" alt="Fintech" fill className="object-cover opacity-20 blur-[1px]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[color:var(--color-fintech-dark)] via-transparent to-transparent" />
+        </div>
+        <div className="relative z-10 text-center max-w-sm space-y-8 [animation:var(--animate-fadeIn)]">
+          <div className="bg-white/5 backdrop-blur-3xl p-10 md:p-14 rounded-[3rem] md:rounded-[4rem] border border-white/10 shadow-3xl">
+            <div className="bg-white w-20 h-20 md:w-24 md:h-24 rounded-[1.5rem] md:rounded-3xl flex items-center justify-center text-[color:var(--color-fintech-blue)] mb-8 mx-auto shadow-2xl">
+              <Shield size={48} />
+            </div>
+            <h2 className="text-3xl lg:text-5xl font-black text-white mb-6 leading-tight tracking-tighter">
+              {sidePanel[mode].title}
+            </h2>
+            <p className="text-blue-100/60 text-base md:text-lg font-bold leading-relaxed">
+              {sidePanel[mode].sub}
+            </p>
+          </div>
+          <div className="flex justify-center gap-6 text-[color:var(--color-fintech-accent)] font-black text-[9px] md:text-[10px] uppercase tracking-[0.4em] opacity-80">
+            <span className="flex items-center gap-2"><ShieldCheck size={14} /> AES-256</span>
+            <span className="flex items-center gap-2"><ShieldCheck size={14} /> TLS 1.3</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Panneau droit ─────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col justify-center py-16 px-6 sm:px-12 md:px-20 lg:px-24 bg-white/40 backdrop-blur-sm order-1 lg:order-2">
+        <div className="max-w-md mx-auto w-full space-y-12 [animation:var(--animate-fadeIn)]">
+
+          {/* Logo */}
+          <div className="flex flex-col items-center lg:items-start gap-10">
+            <div
+              className="bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-50 cursor-pointer hover:scale-110 transition-all"
+              onClick={() => router.push('/')}
+            >
+              <Image src="/logos/logo-compare-ta-banque.png" alt="CTB" width={160} height={64} className="h-16 md:h-24 w-auto object-contain" />
+            </div>
+            <div className="text-center lg:text-left">
+              <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-2 tracking-tighter">
+                {mode === 'login'  && 'Bienvenue au Conseil IA.'}
+                {mode === 'signup' && 'Créer votre compte.'}
+                {mode === 'forgot' && 'Mot de passe oublié ?'}
+                {mode === 'reset'  && 'Définir un nouveau mot de passe.'}
+              </h1>
+              <p className="text-slate-500 font-bold md:text-lg">
+                {mode === 'login'  && 'Connectez-vous pour votre suivi analytique.'}
+                {mode === 'signup' && 'Accédez à vos recommandations personnalisées.'}
+                {mode === 'forgot' && 'Un lien sécurisé vous sera envoyé par email.'}
+                {mode === 'reset'  && 'Choisissez un mot de passe d\'au moins 6 caractères.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Message feedback */}
+          {message && (
+            <div className={`p-5 rounded-[2rem] border text-sm font-bold flex items-start gap-3 ${
+              message.type === 'success'
+                ? 'bg-green-50 border-green-200 text-green-700'
+                : 'bg-red-50 border-red-200 text-red-600'
+            }`}>
+              {message.type === 'success'
+                ? <CheckCircle2 size={20} className="text-green-500 shrink-0 mt-0.5" />
+                : <AlertCircle  size={20} className="text-red-500 shrink-0 mt-0.5" />
+              }
+              {message.text}
+            </div>
+          )}
+
+          {/* Formulaire Login / Signup */}
+          {(mode === 'login' || mode === 'signup') && (
+            <form className="space-y-8" onSubmit={handleAuth}>
+              <div className="space-y-6">
+                <AuthInput id="email" label="Email" name="email" type="email"
+                  placeholder="email@exemple.com" value={form.email}
+                  onChange={set('email')} icon={<Mail size={22} />}
+                />
+                <div>
+                  <div className="flex justify-between items-center mb-2.5 ml-2">
+                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                      Mot de Passe
+                    </label>
+                    {mode === 'login' && (
+                      <button type="button" onClick={() => switchMode('forgot')}
+                        className="font-black text-[color:var(--color-fintech-accent)] text-[9px] md:text-[10px] hover:underline uppercase tracking-widest">
+                        Mot de passe oublié ?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative group">
+                    <div className="absolute left-5 top-5 text-slate-300 group-focus-within:text-[color:var(--color-fintech-blue)] transition-colors">
+                      <KeyRound size={22} strokeWidth={2.5} />
+                    </div>
+                    <input
+                      type="password" name="password" required minLength={6}
+                      value={form.password} onChange={set('password')}
+                      className="w-full pl-16 pr-6 py-5 md:py-6 bg-slate-50 border-2 border-slate-100 rounded-3xl md:rounded-[2rem] focus:border-[color:var(--color-fintech-blue)] focus:bg-white outline-none transition-all font-black text-slate-800 tracking-[0.4em] placeholder:tracking-widest"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+              </div>
+              {mode === 'login' && (
+                <label className="flex items-center gap-3 cursor-pointer select-none group">
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                    rememberMe
+                      ? 'bg-[color:var(--color-fintech-blue)] border-[color:var(--color-fintech-blue)]'
+                      : 'bg-white border-slate-300 group-hover:border-[color:var(--color-fintech-blue)]'
+                  }`}
+                    onClick={() => setRememberMe(v => !v)}>
+                    {rememberMe && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
+                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <input type="checkbox" className="sr-only" checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)} />
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-600 transition-colors">
+                    Se souvenir de moi
+                  </span>
+                </label>
+              )}
+              <SubmitButton loading={loading} label={mode === 'login' ? 'Authentification' : 'Créer mon compte'} />
+            </form>
+          )}
+
+          {/* Formulaire Forgot */}
+          {mode === 'forgot' && (
+            <form className="space-y-8" onSubmit={handleForgotPassword}>
+              <AuthInput id="forgot_email" label="Votre adresse email" name="email" type="email"
+                placeholder="email@exemple.com" value={form.email}
+                onChange={set('email')} icon={<Mail size={22} />}
+              />
+              <SubmitButton loading={loading} label="Envoyer le lien" />
+            </form>
+          )}
+
+          {/* Formulaire Reset */}
+          {mode === 'reset' && (
+            <form className="space-y-8" onSubmit={handleResetPassword}>
+              <AuthInput id="new_password" label="Nouveau mot de passe" name="password" type="password"
+                placeholder="••••••••" value={form.password}
+                onChange={set('password')} icon={<KeyRound size={22} />}
+              />
+              <AuthInput id="confirm_password" label="Confirmer le mot de passe" name="confirmPassword" type="password"
+                placeholder="••••••••" value={form.confirmPassword}
+                onChange={set('confirmPassword')} icon={<KeyRound size={22} />}
+              />
+              <SubmitButton loading={loading} label="Enregistrer le mot de passe" />
+            </form>
+          )}
+
+          {/* Footer liens */}
+          <div className="flex flex-col items-center gap-8 pt-4">
+            {(mode === 'login' || mode === 'signup') && (
+              <button onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
+                className="text-slate-400 hover:text-slate-900 font-black text-[10px] md:text-xs uppercase tracking-[0.1em] transition-all">
+                {mode === 'login'
+                  ? 'Nouveau sur CTB ? Créer votre accès Premium'
+                  : 'Déjà membre ? Authentification sécurisée'}
+              </button>
+            )}
+            {(mode === 'forgot' || mode === 'reset') && (
+              <button onClick={() => switchMode('login')}
+                className="text-slate-400 hover:text-slate-900 font-black text-[10px] md:text-xs uppercase tracking-[0.1em] transition-all">
+                Retour à la connexion
+              </button>
+            )}
+            <div className="w-full h-[1px] bg-slate-100" />
+            <button onClick={() => router.push('/')}
+              className="group flex items-center gap-3 text-[color:var(--color-fintech-blue)] hover:text-black font-black text-xs uppercase tracking-[0.3em] transition-all">
+              <ChevronLeft size={20} className="group-hover:-translate-x-2 transition-all" /> Annuler & Retour
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Sous-composants ─────────────────────────────────────────── */
+
+function SubmitButton({ loading, label }: { loading: boolean; label: string }) {
+  return (
+    <button type="submit" disabled={loading}
+      className="w-full py-6 md:py-8 px-6 rounded-[2.5rem] shadow-3xl shadow-blue-600/30 text-xl md:text-2xl font-black text-white bg-[color:var(--color-fintech-blue)] hover:bg-black transition-all disabled:opacity-70 flex items-center justify-center gap-4 group active:scale-95">
+      {loading
+        ? <><Loader2 size={28} className="[animation:var(--animate-spin)]" /> Validation...</>
+        : <>{label} <ArrowRight size={28} className="group-hover:translate-x-3 transition-transform" /></>
+      }
+    </button>
+  );
+}
+
+function AuthInput({
+  label, name, placeholder, onChange, icon, type = 'text', id, value,
+}: {
+  label: string; name: string; placeholder: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  icon: React.ReactNode; type?: string; id: string; value: string;
+}) {
+  return (
+    <div className="w-full">
+      <label htmlFor={id} className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2.5 ml-2">
+        {label}
+      </label>
+      <div className="relative group">
+        <div className="absolute left-5 top-5 text-slate-300 group-focus-within:text-[color:var(--color-fintech-blue)] transition-colors">
+          {icon}
+        </div>
+        <input
+          id={id} type={type} name={name} required value={value} onChange={onChange}
+          className="w-full pl-16 pr-6 py-5 md:py-6 bg-slate-50 border-2 border-slate-100 rounded-3xl md:rounded-[2rem] focus:border-[color:var(--color-fintech-blue)] focus:bg-white outline-none transition-all font-black text-slate-800 placeholder:font-bold placeholder:text-slate-300"
+          placeholder={placeholder}
+        />
+      </div>
+    </div>
+  );
+}

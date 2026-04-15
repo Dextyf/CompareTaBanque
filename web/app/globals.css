@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* ── Couleurs CompareTaBanque ─────────────────────────────── */
+  --color-fintech-blue:   #005596;
+  --color-fintech-light:  #1A75C2;
+  --color-fintech-accent: #8DC63F;
+  --color-fintech-dark:   #00335c;
+
+  /* ── Polices ──────────────────────────────────────────────── */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+               Helvetica, Arial, sans-serif;
+
+  /* ── Animations ───────────────────────────────────────────── */
+  --animate-float:         float 6s ease-in-out infinite;
+  --animate-float-delayed: float-delayed 8s ease-in-out infinite;
+  --animate-gradient:      gradient 8s linear infinite;
+  --animate-fadeIn:        fadeIn 0.4s ease-out both;
+  --animate-spin:          spin 1s linear infinite;
+}
+
+/* ── Keyframes ──────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px);   }
+  50%       { transform: translateY(-15px); }
+}
+
+@keyframes float-delayed {
+  0%, 100% { transform: translateY(0px);   }
+  50%       { transform: translateY(-10px); }
+}
+
+@keyframes gradient {
+  0%, 100% { background-position: 0%   50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ── Utilitaires personnalisés ──────────────────────────────── */
+@layer utilities {
+  .glassmorphism {
+    background: rgb(255 255 255 / 0.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgb(255 255 255 / 0.2);
+    box-shadow: 0 8px 32px rgb(0 0 0 / 0.12);
+  }
+
+  .shadow-3xl {
+    box-shadow: 0 35px 60px -15px rgb(0 0 0 / 0.35);
+  }
+}
+
+/* ── Reset global ───────────────────────────────────────────── */
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* animation-delay utilitaire non inclus dans Tailwind v4 par défaut */
+.animation-delay-1s { animation-delay: 1s; }

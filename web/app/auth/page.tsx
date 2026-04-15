@@ -41,12 +41,19 @@ export default function AuthPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [form,       setForm]       = useState({ email: '', password: '', confirmPassword: '' });
 
-  // Détection lien recovery dans le hash
+  // Détection lien recovery dans le hash + erreurs callback
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const hash = window.location.hash;
+      const hash   = window.location.hash;
+      const params = new URLSearchParams(window.location.search);
       if (hash.includes('type=recovery') || hash.includes('type=email_change')) {
         setMode('reset');
+      }
+      const cbError = params.get('error');
+      if (cbError === 'confirmation_failed') {
+        setMessage({ type: 'error', text: 'Le lien de confirmation a expiré ou est invalide. Réinscrivez-vous.' });
+      } else if (cbError === 'no_code') {
+        setMessage({ type: 'error', text: 'Lien de confirmation invalide. Utilisez le lien reçu par email.' });
       }
     }
   }, []);
@@ -102,16 +109,34 @@ export default function AuthPage() {
         const hasConsent = localStorage.getItem(`ctb_consent_${uid}`) === 'granted';
         router.push(hasConsent ? '/' : '/consent');
       } else {
+        const redirectTo = `${window.location.origin}/auth/callback`;
         const { data, error } = await supabase.auth.signUp({
           email:    form.email.trim().toLowerCase(),
           password: form.password,
+          options:  { emailRedirectTo: redirectTo },
         });
         if (error) throw error;
         if (data.session) {
+          // Email auto-confirmé (ex : test local sans SMTP) → consent direct
+          // Envoyer quand même l'email de bienvenue RGPD (fire & forget)
+          fetch('/api/welcome-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: form.email.trim().toLowerCase() }),
+          }).catch(() => {/* non bloquant */});
           router.push('/consent');
         } else {
-          setMessage({ type: 'success', text: 'Compte créé ! Vérifiez votre email pour confirmer votre inscription.' });
-          switchMode('login');
+          // Email de confirmation Supabase envoyé + email RGPD Resend (fire & forget)
+          fetch('/api/welcome-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: form.email.trim().toLowerCase() }),
+          }).catch(() => {/* non bloquant */});
+
+          setMessage({
+            type: 'success',
+            text: '✅ Compte créé ! Deux emails vous ont été envoyés : (1) un lien de confirmation à cliquer pour activer votre compte, (2) un récapitulatif de nos engagements RGPD. Vérifiez votre boîte mail.',
+          });
         }
       }
     } catch (err: unknown) {

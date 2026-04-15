@@ -301,9 +301,12 @@ function ResultsContent() {
               Nos conseillers sont disponibles pour affiner votre dossier avant l&apos;envoi banque.
             </p>
           </div>
-          <button className="bg-slate-900 text-white px-10 py-5 rounded-full font-black hover:bg-[color:var(--color-fintech-accent)] transition-all whitespace-nowrap">
+          <a
+            href="mailto:sakidesireluc@gmail.com?subject=Coaching%20Expert%20%E2%80%94%20CompareTaBanque&body=Bonjour%2C%20je%20souhaite%20un%20accompagnement%20expert%20pour%20mon%20dossier%20bancaire."
+            className="bg-slate-900 text-white px-10 py-5 rounded-full font-black hover:bg-[color:var(--color-fintech-accent)] transition-all whitespace-nowrap"
+          >
             Parler à un Expert
-          </button>
+          </a>
         </div>
 
         <div className="mt-20 text-center opacity-70 px-6">

@@ -31,10 +31,19 @@ export interface Profile {
   email?: string;
   phone?: string;
   age?: string | number;
+  // Type principal
   company_type?: string;
   type_pme?: string;
+  // Particulier
   statut?: string;
+  corps_fonction?: string;         // ★ NOUVEAU — utilisé en affinité banque/corps
+  anciennete_emploi?: string;      // ★ NOUVEAU — '<1'|'1-3'|'3-7'|'7-15'|'15+'
+  secteur_salarie?: string;        // ★ NOUVEAU — secteur employeur salarié privé
+  // Entreprise
   legal_type?: string;
+  taille_entreprise?: string;      // ★ NOUVEAU — '1-5'|'6-10'|'11-50'|'51-200'|'200+'
+  anciennete_entreprise?: string;  // ★ NOUVEAU — '<1'|'1-3'|'3-7'|'7+'
+  // Finances
   needs_credit?: string;
   type_credit?: string;
   secteur_activite?: string;
@@ -44,9 +53,11 @@ export interface Profile {
   monthly_income?: number | string;
   chiffre_affaires?: number | string;
   montant_demande?: number | string;
-  apport_personnel_pct?: number | string;
+  apport_personnel_pct?: number | string; // ★ NOUVEAU — utilisé dans scoreCost
+  // Partenariats
   partenariat_sgpme?: boolean;
   partenariat_ifc?: boolean;
+  // Intérêts
   interests?: {
     savings?: boolean;
     visa_premium?: boolean;
@@ -97,6 +108,38 @@ const TARGET_PROFILE_MAP: Record<string, string> = {
 
 const SCORE_WEIGHTS = { access: 30, cost: 30, service: 20, trust: 20 };
 
+/* ── ★ AMÉLIORATION 5 : Affinité secteur-banque ─────────────── */
+// Secteurs d'activité où chaque banque est historiquement plus forte
+const BANK_SECTOR_AFFINITY: Record<string, string[]> = {
+  BRIDGE:  ['Finance / Assurance', 'Informatique / Numérique', 'Services / Conseil'],
+  SGCI:    ['BTP / Immobilier', 'Industrie / Manufacture', 'Transport / Logistique'],
+  NSIA:    ['Santé / Pharmacie', 'Services / Conseil', 'Finance / Assurance'],
+  BNI:     ['Éducation / Formation', 'Agriculture / Élevage', 'Services / Conseil'],
+  CORIS:   ['Agriculture / Élevage', 'Commerce / Distribution', 'Tourisme / Hôtellerie'],
+  BICICI:  ['BTP / Immobilier', 'Industrie / Manufacture', 'Finance / Assurance'],
+  SIB:     ['Commerce / Distribution', 'Services / Conseil', 'Tourisme / Hôtellerie'],
+  BDU:     ['BTP / Immobilier', 'Commerce / Distribution', 'Agriculture / Élevage'],
+};
+
+/* ── ★ AMÉLIORATION 5b : Affinité corps de fonction-banque ──── */
+// Certains corps de l'État ont des accords préférentiels avec certaines banques
+const BANK_CORPS_AFFINITY: Record<string, string[]> = {
+  BNI:   ['education', 'administration', 'justice'],
+  SGCI:  ['armee', 'police', 'douane_impot'],
+  CORIS: ['education', 'sante'],
+  SIB:   ['administration', 'sante'],
+};
+
+/* ── ★ AMÉLIORATION 7 : Spécialisation crédit par type ──────── */
+// Banques ayant une expertise reconnue sur chaque type de crédit
+const CREDIT_TYPE_BANK_BOOST: Record<string, string[]> = {
+  tresorerie:    ['BRIDGE', 'SGCI', 'BICICI'],   // corporate banking fort
+  auto:          ['NSIA', 'BICICI', 'SIB'],        // assurance + Visa Platinum
+  immobilier:    ['SGCI', 'BNI', 'BICICI', 'SIB'], // historique immobilier
+  investissement: ['BRIDGE', 'SGCI', 'CORIS'],      // accompagnement entreprise
+  consommation:  ['SIB', 'BNI', 'BDU'],            // crédit particulier classique
+};
+
 /* ── Helpers ────────────────────────────────────────────────── */
 
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
@@ -105,6 +148,31 @@ const toNum = (v: unknown, fallback = 0): number => {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 };
+
+/* ── ★ AMÉLIORATION 2 : Score ancienneté ────────────────────── */
+function getSeniorityBonus(anciennete?: string): number {
+  switch (anciennete) {
+    case '<1':   return 0;
+    case '1-3':  return 1;
+    case '3-7':  return 2;
+    case '7-15': return 3;
+    case '15+':  return 4;
+    case '7+':   return 3;   // ancienneté entreprise
+    default:     return 1;
+  }
+}
+
+/* ── ★ AMÉLIORATION 8 : Score taille entreprise ─────────────── */
+function getTailleScore(taille?: string): number {
+  switch (taille) {
+    case '1-5':    return 0;
+    case '6-10':   return 1;
+    case '11-50':  return 2;
+    case '51-200': return 3;
+    case '200+':   return 4;
+    default:       return 1;
+  }
+}
 
 /* ── Fonctions publiques ────────────────────────────────────── */
 
@@ -125,8 +193,8 @@ export function selectTariff(bank: Bank, targetProfile: string): BankTariff {
 }
 
 export function buildBankOffer(bank: Bank, profile: Profile): BankOffer {
-  const target   = getTargetProfile(profile);
-  const tariff   = selectTariff(bank, target);
+  const target     = getTargetProfile(profile);
+  const tariff     = selectTariff(bank, target);
   const monthlyFee = toNum(tariff.monthly_fee ?? tariff.fees, 0);
   const baseRate   = toNum(tariff.credit_rate ?? tariff.taux ?? bank.taux_base_credit, 9.5);
   const reliability = clamp(toNum(bank.reliability_score, 0), 0, 100);
@@ -162,26 +230,72 @@ function scoreAccess(offer: BankOffer, profile: Profile): number {
   const structuration = clamp(toNum(profile.niveau_structuration, 3), 0, 5);
   const isCredit      = profile.needs_credit !== 'no';
   const creditType    = profile.type_credit ?? 'consommation';
-  const isIndependent = profile.statut === 'indépendant';
+  const statut        = profile.statut ?? '';
 
   if (isCredit) {
     const base = clamp(Math.round((offer.reliability / 100) * 18), 0, 18);
-    const profileBonus =
-      profile.company_type === 'PME'          ? 5 :
-      profile.statut === 'fonctionnaire'       ? 4 :
-      isIndependent                            ? 3 : 2;
-    const structureBonus = structuration >= 4 ? 4 : structuration >= 2 ? 2 : 0;
-    const partnerBonus   = profile.partenariat_sgpme ? 3 : 0;
-    const creditTypeBonus =
-      creditType === 'immobilier'    ? 1 :
-      creditType === 'investissement' ? 2 : 0;
-    return clamp(base + profileBonus + structureBonus + partnerBonus + creditTypeBonus, 0, SCORE_WEIGHTS.access);
+
+    // ★ AMÉLIORATION 3 : Statuts particuliers affinés
+    const profileBonus = (() => {
+      if (profile.company_type === 'PME') return 5;
+      switch (statut) {
+        case 'fonctionnaire':      return 5;  // revenu garanti État
+        case 'retraité':           return 4;  // pension stable
+        case 'salarié_privé':      return 3;  // CDI secteur privé
+        case 'profession_libérale':
+          return structuration >= 4 ? 4 : 2;  // bon revenu mais variable
+        case 'indépendant':
+          return structuration >= 3 ? 3 : 2;  // revenu variable
+        default: return 2;
+      }
+    })();
+
+    const structureBonus  = structuration >= 4 ? 4 : structuration >= 2 ? 2 : 0;
+    const partnerBonus    = profile.partenariat_sgpme ? 3 : 0;
+
+    // ★ AMÉLIORATION 7 : Type de crédit affiné + spécialisation banque
+    const creditTypeBonus = (() => {
+      const bankBoosts = CREDIT_TYPE_BANK_BOOST[creditType] ?? [];
+      const isBankSpecialized = bankBoosts.includes(offer.code);
+      switch (creditType) {
+        case 'immobilier':    return isBankSpecialized ? 3 : 1;
+        case 'investissement':return isBankSpecialized ? 4 : 2;
+        case 'tresorerie':    return isBankSpecialized ? 4 : 0;
+        case 'auto':          return isBankSpecialized ? 2 : 1;
+        case 'consommation':  return isBankSpecialized ? 2 : 0;
+        default:              return 0;
+      }
+    })();
+
+    // ★ AMÉLIORATION 2 : Ancienneté emploi / entreprise
+    const anciennete = profile.company_type === 'PME'
+      ? profile.anciennete_entreprise
+      : profile.anciennete_emploi;
+    const seniorityBonus = getSeniorityBonus(anciennete);
+
+    // ★ AMÉLIORATION 1 : Ratio d'endettement
+    const income   = toNum(
+      profile.company_type === 'PME'
+        ? toNum(profile.chiffre_affaires) / 12
+        : profile.monthly_income,
+      0
+    );
+    const montant  = toNum(profile.montant_demande, 0);
+    const debtRatio = income > 0 ? montant / (income * 12) : 5;
+    const debtBonus = debtRatio < 1 ? 4 : debtRatio < 2 ? 2 : debtRatio < 3 ? 0 : -3;
+
+    return clamp(
+      base + profileBonus + structureBonus + partnerBonus
+      + creditTypeBonus + seniorityBonus + debtBonus,
+      0, SCORE_WEIGHTS.access
+    );
   }
 
-  const digital      = (offer.hasOnline ? 8 : 4) + (offer.hasMobile ? 8 : 4);
-  const visaBonus    = offer.hasVisa ? 6 : 2;
-  const assurBonus   = offer.hasInsurance ? 4 : 0;
-  const feesPromo    = profile.interests?.low_fees && offer.monthlyFee <= 1500 ? 2 : 0;
+  // Mode services (pas de crédit)
+  const digital   = (offer.hasOnline ? 8 : 4) + (offer.hasMobile ? 8 : 4);
+  const visaBonus = offer.hasVisa ? 6 : 2;
+  const assurBonus = offer.hasInsurance ? 4 : 0;
+  const feesPromo = profile.interests?.low_fees && offer.monthlyFee <= 1500 ? 2 : 0;
   return clamp(digital + visaBonus + assurBonus + feesPromo, 0, SCORE_WEIGHTS.access);
 }
 
@@ -192,6 +306,15 @@ function scoreCost(offer: BankOffer, profile: Profile): number {
     if (profile.partenariat_sgpme) rate -= 2.0;
     if (profile.partenariat_ifc)   rate -= 1.0;
     if (profile.company_type === 'PME') rate -= 0.5;
+
+    // ★ AMÉLIORATION 4 : Apport personnel pour crédit immobilier
+    if (profile.type_credit === 'immobilier') {
+      const apport = toNum(profile.apport_personnel_pct, 0);
+      if (apport >= 30)      rate -= 1.5;
+      else if (apport >= 20) rate -= 1.0;
+      else if (apport >= 10) rate -= 0.5;
+    }
+
     rate = Math.max(rate, 4.5);
     if (rate <= 7)  return 30;
     if (rate <= 9)  return 22;
@@ -211,20 +334,62 @@ function scoreService(offer: BankOffer, profile: Profile): number {
   score += offer.hasMobile  ? 6 : 2;
   score += offer.hasVisa    ? 5 : 1;
   score += offer.hasInsurance ? 3 : 0;
-  if (profile.interests?.visa_premium   && offer.hasInternationalVisa) score += 3;
-  if (profile.interests?.low_fees       && offer.monthlyFee <= 1500)    score += 2;
-  if (profile.interests?.savings        && offer.monthlyFee === 0)      score += 2;
+  if (profile.interests?.visa_premium    && offer.hasInternationalVisa) score += 3;
+  if (profile.interests?.low_fees        && offer.monthlyFee <= 1500)   score += 2;
+  if (profile.interests?.savings         && offer.monthlyFee === 0)     score += 2;
   if (profile.interests?.business_credit && offer.hasMobile && offer.hasOnline) score += 1;
-  if (profile.interests?.mortgage       && offer.hasVisa)               score += 1;
+  if (profile.interests?.mortgage        && offer.hasVisa)              score += 1;
+
+  // ★ AMÉLIORATION 6 : Besoin d'autonomie digitale
+  const autonomieNeed = toNum(profile.besoin_autonomie, 3);
+  if (autonomieNeed >= 4) {
+    if (offer.scoreAutonomieBase >= 12) score += 3;      // fort digital (Bridge, SGCI)
+    else if (offer.scoreAutonomieBase >= 10) score += 1; // digital correct
+  } else if (autonomieNeed <= 2 && offer.scoreAutonomieBase <= 10) {
+    score += 1; // préfère conseiller humain → banques à réseau dense
+  }
+
   return clamp(score, 0, SCORE_WEIGHTS.service);
 }
 
-function scoreTrust(offer: BankOffer): number {
+function scoreTrust(offer: BankOffer, profile: Profile): number {
   const baseTrust  = clamp(Math.round((offer.reliability / 100) * 12), 0, 12);
   const partner    = clamp(offer.scorePartenariats, 0, 6);
   const autonomie  = offer.scoreAutonomieBase >= 12 ? 3 : offer.scoreAutonomieBase >= 10 ? 2 : 1;
   const stability  = offer.reliability >= 85 ? 2 : offer.reliability >= 70 ? 1 : 0;
-  return clamp(baseTrust + partner + autonomie + stability, 0, SCORE_WEIGHTS.trust);
+
+  let bonus = 0;
+
+  // ★ AMÉLIORATION 5 : Adéquation secteur d'activité - banque
+  const secteur = profile.secteur_activite ?? '';
+  const bankSectors = BANK_SECTOR_AFFINITY[offer.code] ?? [];
+  if (secteur && bankSectors.some(s => secteur.includes(s.split('/')[0].trim()))) {
+    bonus += 2;
+  }
+
+  // ★ AMÉLIORATION 5b : Corps de fonction - banque
+  if (profile.statut === 'fonctionnaire' && profile.corps_fonction) {
+    const bankCorps = BANK_CORPS_AFFINITY[offer.code] ?? [];
+    if (bankCorps.includes(profile.corps_fonction)) bonus += 2;
+  }
+
+  // ★ AMÉLIORATION 8 : Taille entreprise PME — adéquation banque
+  if (profile.company_type === 'PME') {
+    const tailleScore = getTailleScore(profile.taille_entreprise);
+    if (tailleScore >= 3) {
+      // Grande PME → banques corporate
+      if (['BRIDGE', 'SGCI', 'BICICI'].includes(offer.code)) bonus += 2;
+    } else if (tailleScore <= 1) {
+      // Micro-entreprise / TPE → banques inclusives
+      if (['CORIS', 'BNI', 'BDU'].includes(offer.code)) bonus += 2;
+    }
+
+    // Ancienneté entreprise renforce la confiance
+    const seniorityEntreprise = getSeniorityBonus(profile.anciennete_entreprise);
+    bonus += Math.min(seniorityEntreprise, 2);
+  }
+
+  return clamp(baseTrust + partner + autonomie + stability + bonus, 0, SCORE_WEIGHTS.trust);
 }
 
 function getProbability(score: number, needsCredit: boolean): string {
@@ -258,7 +423,7 @@ export function scoreBanks(banks: Bank[], profile: Profile): ScoredBank[] {
     const access  = scoreAccess(offer, profile);
     const cost    = scoreCost(offer, profile);
     const service = scoreService(offer, profile);
-    const trust   = scoreTrust(offer);
+    const trust   = scoreTrust(offer, profile);   // profile passé en plus
     const score   = clamp(Math.round(access + cost + service + trust), 0, 100);
     const taux    = needsCredit ? offer.baseRate : offer.monthlyFee;
 
@@ -266,12 +431,12 @@ export function scoreBanks(banks: Bank[], profile: Profile): ScoredBank[] {
       ...bank,
       ...offer,
       score,
-      scoreBreakdown:       { access, cost, service, trust },
-      taux_estime:          needsCredit ? `${taux.toFixed(1)}%` : `${offer.monthlyFee} F/mois`,
-      probabilite:          getProbability(score, needsCredit),
-      garantie_requise:     needsCredit ? 'Sur dossier' : 'Non requise',
+      scoreBreakdown:        { access, cost, service, trust },
+      taux_estime:           needsCredit ? `${taux.toFixed(1)}%` : `${offer.monthlyFee} F/mois`,
+      probabilite:           getProbability(score, needsCredit),
+      garantie_requise:      needsCredit ? 'Sur dossier' : 'Non requise',
       dependance_conseiller: offer.scoreAutonomieBase >= 11 ? 'Faible' : 'Moyenne',
-      comment:              getComment(score, needsCredit),
+      comment:               getComment(score, needsCredit),
     };
   });
 }

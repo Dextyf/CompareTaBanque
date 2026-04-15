@@ -6,6 +6,7 @@ import { ShieldCheck, TrendingUp, CreditCard, ChevronRight, LogOut } from 'lucid
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { PARTNER_BANKS } from '@/lib/banks-config';
 
 export default function Home() {
   const router  = useRouter();
@@ -201,15 +202,10 @@ export default function Home() {
           <p className="text-[10px] md:text-xs font-black uppercase text-slate-500 tracking-[0.4em] mb-12">
             Grilles Tarifaires Officielles · Zone UEMOA 2026
           </p>
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
-            <BankLogo src="/logos/coris.png"  alt="Coris Bank" />
-            <BankLogo src="/logos/nsia.png"   alt="NSIA Banque" />
-            <BankLogo src="/logos/sib.png"    alt="SIB" />
-            <BankLogo src="/logos/bni.png"    alt="BNI" />
-            <BankLogo src="/logos/sgbci.png"  alt="SGCI" />
-            <BankLogo src="/logos/bicici.png" alt="BICICI" />
-            <BankLogo src="/logos/bdu.png"    alt="BDU-CI" />
-            <BankLogo src="/logos/bridge.png" alt="Bridge Bank" />
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '2rem' }}>
+            {PARTNER_BANKS.map(bank => (
+              <BankLogo key={bank.code} src={bank.logo} alt={bank.name} />
+            ))}
           </div>
         </div>
       </section>
@@ -257,9 +253,20 @@ export default function Home() {
 
 function BankLogo({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="bg-white p-4 md:p-6 rounded-3xl shadow-xl hover:scale-110 border border-slate-50 flex items-center justify-center w-32 md:w-48 h-20 md:h-28 transition-all">
+    <div
+      style={{ background: '#fff', borderRadius: '1.5rem', boxShadow: '0 4px 24px rgba(0,0,0,0.10)', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '160px', height: '80px', padding: '12px', transition: 'transform .2s', flexShrink: 0 }}
+      onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
+      onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} style={{ maxHeight: '100%', width: 'auto', objectFit: 'contain' }} />
+      <img
+        src={src}
+        alt={alt}
+        width={136}
+        height={56}
+        style={{ maxWidth: '136px', maxHeight: '56px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
+        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+      />
     </div>
   );
 }

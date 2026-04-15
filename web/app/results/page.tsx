@@ -290,55 +290,52 @@ function ResultsContent() {
     {/* ── Modale de confirmation avant transmission ─────────── */}
     {pendingBank && (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.70)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
         onClick={e => { if (e.target === e.currentTarget) setPendingBank(null); }}
       >
-        <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg overflow-hidden [animation:var(--animate-fadeIn)]">
+        <div style={{ background: '#fff', borderRadius: '2.5rem', width: '100%', maxWidth: '520px', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.30)', animation: 'fadeIn 0.25s ease-out both' }}>
 
-          {/* Header modale */}
-          <div className="bg-[color:var(--color-fintech-dark)] px-10 py-8 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-[color:var(--color-fintech-accent)] p-3 rounded-2xl">
-                <Landmark size={24} className="text-white" />
+          {/* Header */}
+          <div style={{ background: '#00335c', padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ background: '#8DC63F', padding: '10px', borderRadius: '14px', display: 'flex' }}>
+                <Landmark size={22} color="#fff" />
               </div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Confirmation requise</p>
-                <p className="text-white font-black text-lg">{pendingBank.name}</p>
+                <p style={{ fontSize: '10px', fontWeight: 900, color: '#94a3b8', letterSpacing: '3px', textTransform: 'uppercase', margin: 0 }}>Confirmation requise</p>
+                <p style={{ color: '#fff', fontWeight: 900, fontSize: '17px', margin: 0 }}>{pendingBank.name}</p>
               </div>
             </div>
-            <button
-              onClick={() => setPendingBank(null)}
-              className="text-slate-400 hover:text-white transition-colors bg-white/10 hover:bg-red-500/30 p-2 rounded-xl"
-            >
-              <X size={20} />
+            <button onClick={() => setPendingBank(null)}
+              style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '10px', padding: '8px', cursor: 'pointer', display: 'flex' }}>
+              <X size={20} color="#94a3b8" />
             </button>
           </div>
 
-          {/* Corps modale */}
-          <div className="p-10">
-            {/* Logo + score banque */}
-            <div className="flex items-center gap-5 mb-8 p-5 bg-slate-50 rounded-3xl border border-slate-100">
+          {/* Corps */}
+          <div style={{ padding: '32px' }}>
+
+            {/* Logo + score */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', padding: '16px', background: pendingBank.code === 'BRIDGE' ? '#111827' : '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={pendingBank.logo} alt={pendingBank.name}
-                style={{ height: 56, width: 'auto', maxWidth: 120, objectFit: 'contain' }} />
+              <img src={pendingBank.logo} alt={pendingBank.name} style={{ height: 52, width: 'auto', maxWidth: 110, objectFit: 'contain' }} />
               <div>
-                <p className="font-black text-slate-900 text-xl">{pendingBank.name}</p>
-                <p className="text-[color:var(--color-fintech-blue)] font-black text-2xl">{pendingBank.score}% compatibilité</p>
+                <p style={{ fontWeight: 900, color: '#0f172a', fontSize: '18px', margin: '0 0 4px' }}>{pendingBank.name}</p>
+                <p style={{ fontWeight: 900, color: '#005596', fontSize: '22px', margin: 0 }}>{pendingBank.score}% compatibilité</p>
               </div>
             </div>
 
-            {/* Message explicatif */}
-            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 mb-8">
-              <p className="text-amber-800 font-black text-sm uppercase tracking-widest mb-2">⚠️ Avant de confirmer</p>
-              <p className="text-slate-700 font-medium leading-relaxed text-[15px]">
+            {/* Message */}
+            <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
+              <p style={{ color: '#92400e', fontWeight: 900, fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 8px' }}>⚠️ Avant de confirmer</p>
+              <p style={{ color: '#374151', fontWeight: 500, lineHeight: 1.7, fontSize: '15px', margin: 0 }}>
                 Vous autorisez CompareTaBanque à transmettre votre dossier à <strong>{pendingBank.name}</strong>.
               </p>
             </div>
 
-            {/* Données qui seront transmises */}
-            <div className="mb-8 space-y-2">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Informations transmises</p>
+            {/* Données transmises */}
+            <div style={{ marginBottom: '24px' }}>
+              <p style={{ fontSize: '10px', fontWeight: 900, color: '#94a3b8', letterSpacing: '3px', textTransform: 'uppercase', margin: '0 0 12px' }}>Informations transmises</p>
               {[
                 ['Identité', String(profile.full_name ?? '—')],
                 ['Contact',  `${String((profile as Record<string,unknown>).email ?? '—')} · ${String((profile as Record<string,unknown>).phone ?? '—')}`],
@@ -347,36 +344,32 @@ function ResultsContent() {
                   ? [['Montant crédit', `${displayMontant} FCFA — ${profile.type_credit ?? ''}`]]
                   : [['Besoin', 'Compte & Services bancaires']]),
               ].map(([label, val]) => (
-                <div key={label} className="flex justify-between text-sm border-b border-slate-100 pb-2">
-                  <span className="text-slate-400 font-bold">{label}</span>
-                  <span className="text-slate-800 font-black text-right max-w-[60%] truncate">{val}</span>
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                  <span style={{ color: '#94a3b8', fontWeight: 700 }}>{label}</span>
+                  <span style={{ color: '#0f172a', fontWeight: 900, textAlign: 'right', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{val}</span>
                 </div>
               ))}
             </div>
 
             {/* Boutons */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => setPendingBank(null)}
-                className="flex-1 py-4 rounded-2xl border-2 border-slate-200 text-slate-600 font-black hover:bg-slate-50 transition-all"
-              >
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button onClick={() => setPendingBank(null)}
+                style={{ flex: 1, minWidth: '120px', padding: '14px', border: '2px solid #e2e8f0', borderRadius: '14px', background: '#fff', color: '#475569', fontWeight: 900, fontSize: '15px', cursor: 'pointer' }}>
                 Annuler
               </button>
               <button
-                onClick={() => { setPendingBank(null); handleSelectBank(pendingBank); }}
+                onClick={() => { const b = pendingBank; setPendingBank(null); handleSelectBank(b); }}
                 disabled={submitting}
-                className="flex-1 py-4 rounded-2xl bg-[color:var(--color-fintech-blue)] text-white font-black text-lg hover:bg-slate-900 transition-all shadow-xl disabled:opacity-60 flex items-center justify-center gap-2"
-              >
+                style={{ flex: 2, minWidth: '160px', padding: '14px', border: 'none', borderRadius: '14px', background: submitting ? '#94a3b8' : '#005596', color: '#fff', fontWeight: 900, fontSize: '16px', cursor: submitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 {submitting
-                  ? <><Loader2 size={18} className="[animation:var(--animate-spin)]" /> Envoi…</>
+                  ? 'Envoi en cours…'
                   : <><CheckCircle2 size={18} /> CONFIRMATION</>
                 }
               </button>
             </div>
 
-            <p className="text-center text-[10px] text-slate-400 font-bold mt-4 flex items-center justify-center gap-1">
-              <ShieldCheck size={12} className="text-[color:var(--color-fintech-accent)]" />
-              Conforme aux standards BCEAO
+            <p style={{ textAlign: 'center', fontSize: '10px', color: '#94a3b8', fontWeight: 700, marginTop: '16px' }}>
+              🔒 Conforme aux standards BCEAO
             </p>
           </div>
         </div>
@@ -639,11 +632,14 @@ function BankCard({
 
       {/* Tête carte */}
       <div className="p-10 md:p-12 text-center border-b border-slate-50 bg-gradient-to-b from-slate-50/20 to-white">
-        <div className="h-24 md:h-28 flex items-center justify-center mb-8 bg-white rounded-[2.5rem] p-6 w-full shadow-lg border border-slate-50">
+        <div
+          className="h-24 md:h-28 flex items-center justify-center mb-8 rounded-[2.5rem] p-6 w-full shadow-lg"
+          style={{ background: rec.code === 'BRIDGE' ? '#111827' : '#fff', border: rec.code === 'BRIDGE' ? '1px solid #374151' : '1px solid #f1f5f9' }}
+        >
           {rec.logo
             /* eslint-disable-next-line @next/next/no-img-element */
             ? <img src={rec.logo} alt={rec.name} style={{ maxHeight: '100%', width: 'auto', objectFit: 'contain' }} />
-            : <span className="text-2xl font-black text-slate-400">{rec.code}</span>
+            : <span style={{ fontSize: '22px', fontWeight: 900, color: rec.code === 'BRIDGE' ? '#f1f5f9' : '#94a3b8' }}>{rec.code}</span>
           }
         </div>
         <h3 className="font-black text-slate-900 text-3xl mb-1 tracking-tight">{rec.name}</h3>

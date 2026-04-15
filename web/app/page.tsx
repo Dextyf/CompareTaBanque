@@ -29,10 +29,14 @@ export default function Home() {
   };
 
   const goToComparateur = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) { router.push('/auth'); return; }
-    const hasConsent = localStorage.getItem(`ctb_consent_${session.user.id}`) === 'granted';
-    router.push(hasConsent ? '/comparateur' : '/consent');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { router.push('/auth'); return; }
+      const hasConsent = localStorage.getItem(`ctb_consent_${session.user.id}`) === 'granted';
+      router.push(hasConsent ? '/comparateur' : '/consent');
+    } catch {
+      router.push('/auth');
+    }
   };
 
   return (
@@ -186,7 +190,7 @@ export default function Home() {
                 SARL, SA ou SNC : accédez aux meilleures grilles de crédit business et facilitez votre trésorerie.
               </p>
               <button
-                onClick={() => router.push('/auth')}
+                onClick={goToComparateur}
                 className="text-white bg-white/10 hover:bg-[color:var(--color-fintech-blue)] px-8 py-4 rounded-2xl font-black transition-all flex items-center gap-3"
               >
                 Analyse Corporate <ChevronRight size={20} />

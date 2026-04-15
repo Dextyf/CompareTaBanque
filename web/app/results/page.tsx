@@ -61,6 +61,31 @@ function ResultsContent() {
   const [pendingBank,   setPendingBank]   = useState<ScoredBank | null>(null); // modale confirmation
   const savedRef = useRef(false); // évite la double-sauvegarde
 
+  // Modal expert
+  const [showExpertModal, setShowExpertModal] = useState(false);
+  const [expertEmail,     setExpertEmail]     = useState('');
+  const [expertMotif,     setExpertMotif]     = useState('');
+  const [expertDesc,      setExpertDesc]      = useState('');
+  const [expertSending,   setExpertSending]   = useState(false);
+  const [expertSent,      setExpertSent]      = useState(false);
+
+  const sendExpertRequest = async () => {
+    if (!expertEmail.trim() || !expertMotif.trim() || !expertDesc.trim()) return;
+    setExpertSending(true);
+    try {
+      await fetch('/api/contact-expert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: expertEmail, motif: expertMotif, description: expertDesc }),
+      });
+      setExpertSent(true);
+    } catch {
+      setExpertSent(true); // on ferme quand même
+    } finally {
+      setExpertSending(false);
+    }
+  };
+
   useEffect(() => {
     const t = setTimeout(() => setAnalyzing(false), 3200);
     return () => clearTimeout(t);
@@ -439,13 +464,12 @@ function ResultsContent() {
               Nos conseillers sont disponibles pour affiner votre dossier avant l&apos;envoi banque.
             </p>
           </div>
-          <a
-            href="mailto:sakidesireluc@gmail.com?subject=Coaching%20Expert%20%E2%80%94%20CompareTaBanque&body=Bonjour%2C%20je%20souhaite%20un%20accompagnement%20expert%20pour%20mon%20dossier%20bancaire."
-            onClick={e => { e.preventDefault(); window.location.href = 'mailto:sakidesireluc@gmail.com?subject=Coaching%20Expert%20%E2%80%94%20CompareTaBanque&body=Bonjour%2C%20je%20souhaite%20un%20accompagnement%20expert%20pour%20mon%20dossier%20bancaire.'; }}
+          <button
+            onClick={() => { setShowExpertModal(true); setExpertSent(false); setExpertEmail(''); setExpertMotif(''); setExpertDesc(''); }}
             className="bg-slate-900 text-white px-10 py-5 rounded-full font-black hover:bg-[color:var(--color-fintech-accent)] transition-all whitespace-nowrap cursor-pointer"
           >
             Parler à un Expert
-          </a>
+          </button>
         </div>
 
         <div className="mt-20 text-center opacity-70 px-6">
@@ -455,6 +479,116 @@ function ResultsContent() {
         </div>
       </div>
     </div>
+
+    {/* ── Modal Parler à un Expert ─────────────────────────── */}
+    {showExpertModal && (
+      <div
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+        onClick={e => { if (e.target === e.currentTarget) setShowExpertModal(false); }}
+      >
+        <div style={{ background: '#fff', borderRadius: '2rem', width: '100%', maxWidth: '480px', padding: '40px', position: 'relative', boxShadow: '0 32px 80px rgba(0,0,0,0.25)' }}>
+          {/* Fermeture */}
+          <button
+            onClick={() => setShowExpertModal(false)}
+            style={{ position: 'absolute', top: '20px', right: '20px', background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+          >
+            <X size={18} color="#64748b" />
+          </button>
+
+          {expertSent ? (
+            /* ── Succès ── */
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+              <h3 style={{ color: '#0f172a', fontSize: '22px', fontWeight: 900, margin: '0 0 12px' }}>
+                Message envoyé !
+              </h3>
+              <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.7, margin: '0 0 28px' }}>
+                Un expert vous contactera sous 24h à l&apos;adresse indiquée.
+              </p>
+              <button
+                onClick={() => setShowExpertModal(false)}
+                style={{ background: '#00335c', color: '#fff', border: 'none', borderRadius: '999px', padding: '14px 32px', fontWeight: 900, fontSize: '15px', cursor: 'pointer' }}
+              >
+                Fermer
+              </button>
+            </div>
+          ) : (
+            /* ── Formulaire ── */
+            <>
+              <p style={{ fontSize: '10px', fontWeight: 900, color: '#64748b', letterSpacing: '3px', textTransform: 'uppercase', margin: '0 0 8px' }}>
+                Coaching Expert
+              </p>
+              <h3 style={{ color: '#0f172a', fontSize: '24px', fontWeight: 900, margin: '0 0 28px', lineHeight: 1.2 }}>
+                Parler à un Expert
+              </h3>
+
+              {/* Email */}
+              <label style={{ display: 'block', marginBottom: '16px' }}>
+                <span style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  Votre email *
+                </span>
+                <input
+                  type="email"
+                  value={expertEmail}
+                  onChange={e => setExpertEmail(e.target.value)}
+                  placeholder="vous@exemple.com"
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '12px 16px', border: '2px solid #e2e8f0', borderRadius: '12px', fontSize: '15px', outline: 'none', fontFamily: 'inherit' }}
+                  onFocus={e => (e.target.style.borderColor = '#005596')}
+                  onBlur={e => (e.target.style.borderColor = '#e2e8f0')}
+                />
+              </label>
+
+              {/* Motif */}
+              <label style={{ display: 'block', marginBottom: '16px' }}>
+                <span style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  Motif *
+                </span>
+                <input
+                  type="text"
+                  value={expertMotif}
+                  onChange={e => setExpertMotif(e.target.value)}
+                  placeholder="Ex : Crédit immobilier, Compte entreprise…"
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '12px 16px', border: '2px solid #e2e8f0', borderRadius: '12px', fontSize: '15px', outline: 'none', fontFamily: 'inherit' }}
+                  onFocus={e => (e.target.style.borderColor = '#005596')}
+                  onBlur={e => (e.target.style.borderColor = '#e2e8f0')}
+                />
+              </label>
+
+              {/* Description */}
+              <label style={{ display: 'block', marginBottom: '28px' }}>
+                <span style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  Description du besoin *
+                </span>
+                <textarea
+                  value={expertDesc}
+                  onChange={e => setExpertDesc(e.target.value)}
+                  placeholder="Décrivez votre situation et vos attentes…"
+                  rows={4}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '12px 16px', border: '2px solid #e2e8f0', borderRadius: '12px', fontSize: '15px', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+                  onFocus={e => (e.target.style.borderColor = '#005596')}
+                  onBlur={e => (e.target.style.borderColor = '#e2e8f0')}
+                />
+              </label>
+
+              {/* Bouton envoyer */}
+              <button
+                onClick={sendExpertRequest}
+                disabled={expertSending || !expertEmail.trim() || !expertMotif.trim() || !expertDesc.trim()}
+                style={{
+                  width: '100%', padding: '16px', border: 'none', borderRadius: '999px',
+                  background: (!expertEmail.trim() || !expertMotif.trim() || !expertDesc.trim()) ? '#e2e8f0' : '#00335c',
+                  color: (!expertEmail.trim() || !expertMotif.trim() || !expertDesc.trim()) ? '#94a3b8' : '#fff',
+                  fontWeight: 900, fontSize: '16px', cursor: (!expertEmail.trim() || !expertMotif.trim() || !expertDesc.trim()) ? 'not-allowed' : 'pointer',
+                  transition: 'all .2s',
+                }}
+              >
+                {expertSending ? 'Envoi en cours…' : 'Envoyer ma demande'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    )}
     </>
   );
 }

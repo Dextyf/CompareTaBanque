@@ -75,7 +75,11 @@ function ResultsContent() {
           id: b.id as string,
           code: b.code as string,
           name: b.name as string,
-          logo: (b.code === 'SGCI' ? '/logos/sgbci.png' : `/logos/${(b.code as string).toLowerCase()}.png`),
+          logo: (() => {
+            const code = b.code as string;
+            const MAP: Record<string, string> = { SGCI: 'sgbci', BRIDGE: 'bridge' };
+            return `/logos/${MAP[code] ?? code.toLowerCase()}.png`;
+          })(),
           reliability_score:    (b.reliability_score    as number) ?? 0,
           taux_base_credit:     (b.taux_base_credit     as number) ?? 11,
           score_partenariats:   (b.score_partenariats   as number) ?? 3,

@@ -18,11 +18,12 @@ interface SimResult {
 }
 
 const BANKS = [
-  { name: 'Coris Bank — Épargne Prestige',       rate: 5    },
-  { name: 'Coris Bank — Taloklama (Femmes)',      rate: 3.75 },
-  { name: 'NSIA Banque — Épargne',               rate: 3.5  },
-  { name: 'BNI — Épargne',                       rate: 3.5  },
-  { name: 'SIB — Plan Éducation',                rate: 3.5  },
+  { name: 'Bridge Bank — Plan Épargne Immobilier / Étude', rate: 4.5  },
+  { name: 'Coris Bank — Épargne Prestige',                 rate: 5    },
+  { name: 'Coris Bank — Taloklama (Femmes)',               rate: 3.75 },
+  { name: 'NSIA Banque — Épargne',                         rate: 3.5  },
+  { name: 'BNI — Épargne',                                 rate: 3.5  },
+  { name: 'SIB — Plan Éducation',                          rate: 3.5  },
 ];
 
 export default function SimulateurPage() {

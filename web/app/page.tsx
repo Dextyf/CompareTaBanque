@@ -209,6 +209,7 @@ export default function Home() {
             <BankLogo src="/logos/sgbci.png"  alt="SGCI" />
             <BankLogo src="/logos/bicici.png" alt="BICICI" />
             <BankLogo src="/logos/bdu.png"    alt="BDU-CI" />
+            <BankLogo src="/logos/bridge.png" alt="Bridge Bank" />
           </div>
         </div>
       </section>

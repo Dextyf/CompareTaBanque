@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CheckCircle2, TrendingUp, Sparkles, Trophy,
@@ -58,7 +58,7 @@ function ResultsContent() {
   const [submitting,    setSubmitting]    = useState(false);
   const [leadConfirmed, setLeadConfirmed] = useState<{ name: string; code: string } | null>(null);
   const [comparisonId,  setComparisonId]  = useState<string | null>(null);
-  const savedRef = { current: false }; // évite la double-sauvegarde
+  const savedRef = useRef(false); // évite la double-sauvegarde
 
   useEffect(() => {
     const t = setTimeout(() => setAnalyzing(false), 3200);
@@ -408,7 +408,8 @@ function BankCard({
       <div className="p-10 md:p-12 text-center border-b border-slate-50 bg-gradient-to-b from-slate-50/20 to-white">
         <div className="h-24 md:h-28 flex items-center justify-center mb-8 bg-white rounded-[2.5rem] p-6 w-full shadow-lg border border-slate-50">
           {rec.logo
-            ? <Image src={rec.logo} alt={rec.name} width={160} height={80} className="max-h-full object-contain" unoptimized />
+            /* eslint-disable-next-line @next/next/no-img-element */
+            ? <img src={rec.logo} alt={rec.name} style={{ maxHeight: '100%', width: 'auto', objectFit: 'contain' }} />
             : <span className="text-2xl font-black text-slate-400">{rec.code}</span>
           }
         </div>

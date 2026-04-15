@@ -258,7 +258,8 @@ export default function Home() {
 function BankLogo({ src, alt }: { src: string; alt: string }) {
   return (
     <div className="bg-white p-4 md:p-6 rounded-3xl shadow-xl hover:scale-110 border border-slate-50 flex items-center justify-center w-32 md:w-48 h-20 md:h-28 transition-all">
-      <Image src={src} alt={alt} width={160} height={80} className="max-h-full w-auto object-contain" unoptimized />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt} style={{ maxHeight: '100%', width: 'auto', objectFit: 'contain' }} />
     </div>
   );
 }

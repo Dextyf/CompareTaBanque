@@ -20,6 +20,8 @@ export interface BankEntry {
   logo: string;
   /** Pays / zone (affiché dans le footer ou les filtres futurs) */
   zone?: string;
+  /** true si le logo a un fond sombre (le container sera noir au lieu de blanc) */
+  darkBg?: boolean;
 }
 
 export const PARTNER_BANKS: BankEntry[] = [
@@ -30,7 +32,7 @@ export const PARTNER_BANKS: BankEntry[] = [
   { code: 'SGCI',   name: 'SGBCI',             logo: '/logos/sgbci.png',  zone: 'UEMOA' },
   { code: 'BICICI', name: 'BICICI',             logo: '/logos/bicici.png', zone: 'UEMOA' },
   { code: 'BDU',    name: 'BDU-CI',            logo: '/logos/bdu.png',    zone: 'UEMOA' },
-  { code: 'BRIDGE', name: 'Bridge Bank Group', logo: '/logos/bridge.png', zone: 'UEMOA' },
+  { code: 'BRIDGE', name: 'Bridge Bank Group', logo: '/logos/bridge.png', zone: 'UEMOA', darkBg: true },
   // ── Ajouter ici les futures banques ────────────────
   // { code: 'ORABANK', name: 'Orabank',  logo: '/logos/orabank.png', zone: 'UEMOA' },
   // { code: 'GTB',     name: 'GTBank',   logo: '/logos/gtb.png',     zone: 'UEMOA' },

@@ -208,7 +208,7 @@ export default function Home() {
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '2rem' }}>
             {PARTNER_BANKS.map(bank => (
-              <BankLogo key={bank.code} src={bank.logo} alt={bank.name} />
+              <BankLogo key={bank.code} src={bank.logo} alt={bank.name} darkBg={bank.darkBg} />
             ))}
           </div>
         </div>
@@ -255,22 +255,33 @@ export default function Home() {
   );
 }
 
-function BankLogo({ src, alt }: { src: string; alt: string }) {
+function BankLogo({ src, alt, darkBg }: { src: string; alt: string; darkBg?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const bg = darkBg ? '#111827' : '#fff';
+  const border = darkBg ? '1px solid #374151' : '1px solid #f1f5f9';
+
   return (
     <div
-      style={{ background: '#fff', borderRadius: '1.5rem', boxShadow: '0 4px 24px rgba(0,0,0,0.10)', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '160px', height: '80px', padding: '12px', transition: 'transform .2s', flexShrink: 0 }}
+      style={{ background: bg, borderRadius: '1.5rem', boxShadow: '0 4px 24px rgba(0,0,0,0.10)', border, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '160px', height: '80px', padding: '12px', transition: 'transform .2s', flexShrink: 0 }}
       onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
       onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        width={136}
-        height={56}
-        style={{ maxWidth: '136px', maxHeight: '56px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-      />
+      {failed ? (
+        /* Fallback texte si l'image ne charge pas */
+        <span style={{ color: darkBg ? '#f1f5f9' : '#1e293b', fontSize: '11px', fontWeight: 900, textAlign: 'center', lineHeight: 1.3, letterSpacing: '0.5px' }}>
+          {alt}
+        </span>
+      ) : (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={src}
+          alt={alt}
+          width={136}
+          height={56}
+          style={{ maxWidth: '136px', maxHeight: '56px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
+          onError={() => setFailed(true)}
+        />
+      )}
     </div>
   );
 }

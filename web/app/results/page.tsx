@@ -316,7 +316,7 @@ function ResultsContent() {
           <div style={{ padding: '32px' }}>
 
             {/* Logo + score */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', padding: '16px', background: pendingBank.code === 'BRIDGE' ? '#111827' : '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', padding: '16px', background: '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={pendingBank.logo} alt={pendingBank.name} style={{ height: 52, width: 'auto', maxWidth: 110, objectFit: 'contain' }} />
               <div>
@@ -634,12 +634,12 @@ function BankCard({
       <div className="p-10 md:p-12 text-center border-b border-slate-50 bg-gradient-to-b from-slate-50/20 to-white">
         <div
           className="h-24 md:h-28 flex items-center justify-center mb-8 rounded-[2.5rem] p-6 w-full shadow-lg"
-          style={{ background: rec.code === 'BRIDGE' ? '#111827' : '#fff', border: rec.code === 'BRIDGE' ? '1px solid #374151' : '1px solid #f1f5f9' }}
+          style={{ background: '#fff', border: '1px solid #f1f5f9' }}
         >
           {rec.logo
             /* eslint-disable-next-line @next/next/no-img-element */
             ? <img src={rec.logo} alt={rec.name} style={{ maxHeight: '100%', width: 'auto', objectFit: 'contain' }} />
-            : <span style={{ fontSize: '22px', fontWeight: 900, color: rec.code === 'BRIDGE' ? '#f1f5f9' : '#94a3b8' }}>{rec.code}</span>
+            : <span style={{ fontSize: '22px', fontWeight: 900, color: '#94a3b8' }}>{rec.code}</span>
           }
         </div>
         <h3 className="font-black text-slate-900 text-3xl mb-1 tracking-tight">{rec.name}</h3>

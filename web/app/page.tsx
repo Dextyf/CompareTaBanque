@@ -27,6 +27,13 @@ export default function Home() {
     setIsLoggedIn(false);
   };
 
+  const goToComparateur = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) { router.push('/auth'); return; }
+    const hasConsent = localStorage.getItem(`ctb_consent_${session.user.id}`) === 'granted';
+    router.push(hasConsent ? '/comparateur' : '/consent');
+  };
+
   return (
     <div className="min-h-screen bg-[color:var(--color-fintech-dark)] text-white font-sans overflow-x-hidden selection:bg-[color:var(--color-fintech-accent)] selection:text-white">
 
@@ -91,7 +98,7 @@ export default function Home() {
             </p>
             <div className="flex justify-center lg:justify-start">
               <button
-                onClick={() => router.push('/consent')}
+                onClick={goToComparateur}
                 className="w-full sm:w-auto bg-[color:var(--color-fintech-blue)] text-white px-10 py-5 rounded-3xl font-black text-xl shadow-2xl shadow-blue-500/30 hover:bg-white hover:text-slate-900 transition-all flex items-center justify-center gap-3 active:scale-95"
               >
                 Démarrer la comparaison <ChevronRight size={24} />

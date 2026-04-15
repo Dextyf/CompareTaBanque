@@ -2,9 +2,19 @@
 
 import { useRouter } from 'next/navigation';
 import { PieChart, ChevronRight } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function SelectiveComparisonPage() {
-  const router = useRouter();
+  const router   = useRouter();
+  const supabase = createClient();
+
+  const goToComparateur = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    const hasConsent = uid && localStorage.getItem(`ctb_consent_${uid}`) === 'granted';
+    router.push(hasConsent ? '/comparateur' : '/consent');
+  };
+
   return (
     <div className="p-6 md:p-10 max-w-4xl mx-auto">
       <h1 className="text-3xl font-black text-slate-900 tracking-tighter mb-2">Comparateur Manuel</h1>
@@ -16,7 +26,7 @@ export default function SelectiveComparisonPage() {
           Le comparateur manuel arrive dans la prochaine mise à jour.
           En attendant, utilisez le comparateur guidé.
         </p>
-        <button onClick={() => router.push('/consent')}
+        <button onClick={goToComparateur}
           className="inline-flex items-center gap-2 bg-[color:var(--color-fintech-blue)] text-white px-8 py-4 rounded-full font-black hover:bg-slate-900 transition-all">
           Comparateur guidé <ChevronRight size={20} />
         </button>

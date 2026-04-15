@@ -127,6 +127,24 @@ function ResultsContent() {
     };
 
     try {
+      // Sauvegarde de la comparaison dans Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await supabase.from('user_comparisons').insert({
+          auth_user_id:       session.user.id,
+          prospect_id:        prospectId ?? null,
+          profile_snapshot:   profile,
+          top_banks:          banks.map(b => ({
+            name: b.name, code: b.code, score: b.score,
+            probabilite: b.probabilite, taux_estime: b.taux_estime,
+          })),
+          selected_bank_name:  rec.name,
+          selected_bank_code:  rec.code,
+          selected_bank_score: rec.score,
+          income_bracket:      getIncomeBracket(income),
+        });
+      }
+
       // Envoi email de notification (sans bloquer l'UX)
       await fetch('/api/lead-notify', {
         method:  'POST',
@@ -134,7 +152,7 @@ function ResultsContent() {
         body:    JSON.stringify(notifyPayload),
       });
     } catch (err) {
-      console.warn('Notification email non envoyée:', (err as Error).message);
+      console.warn('Erreur save/notification:', (err as Error).message);
     } finally {
       setSubmitting(false);
       setLeadConfirmed({ name: rec.name, code: rec.code });

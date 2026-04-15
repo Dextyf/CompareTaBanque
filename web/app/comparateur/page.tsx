@@ -138,6 +138,8 @@ export default function ProspectFormPage() {
           : formData.monthly_income || '0'
       );
 
+      const { data: { session } } = await supabase.auth.getSession();
+
       const { data, error } = await supabase
         .from('prospects')
         .insert({
@@ -150,6 +152,7 @@ export default function ProspectFormPage() {
           needs_credit:   formData.needs_credit,
           consent_given:  true,
           consent_date:   new Date().toISOString(),
+          auth_user_id:   session?.user?.id ?? null,
         })
         .select('id')
         .single();

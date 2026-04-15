@@ -2,33 +2,64 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, TrendingUp, FileText, PieChart, ShieldCheck } from 'lucide-react';
+import { ChevronRight, TrendingUp, FileText, PieChart, ShieldCheck, Calendar, Trophy } from 'lucide-react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+
+interface Comparison {
+  id: string;
+  created_at: string;
+  selected_bank_name: string;
+  selected_bank_code: string;
+  selected_bank_score: number;
+  income_bracket: string;
+}
 
 interface ProspectData {
   full_name?: string;
   email?: string;
-  needs_credit?: string;
   monthly_income?: number;
   company_type?: string;
 }
 
+const LOGO = (code: string) =>
+  code === 'SGCI' ? '/logos/sgbci.png' : `/logos/${code.toLowerCase()}.png`;
+
 export default function DashboardHomePage() {
   const router   = useRouter();
   const supabase = createClient();
-  const [userData, setUserData] = useState<ProspectData | null>(null);
+  const [userData,     setUserData]     = useState<ProspectData | null>(null);
+  const [comparisons,  setComparisons]  = useState<Comparison[]>([]);
+  const [loading,      setLoading]      = useState(true);
 
   useEffect(() => {
-    supabase
-      .from('prospects')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-      .then(({ data }) => { if (data) setUserData(data); });
+    async function load() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      // Données prospect
+      const { data: prospect } = await supabase
+        .from('prospects')
+        .select('full_name, email, monthly_income, company_type')
+        .eq('auth_user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (prospect) setUserData(prospect);
+
+      // Historique comparaisons
+      const { data: comps } = await supabase
+        .from('user_comparisons')
+        .select('id, created_at, selected_bank_name, selected_bank_code, selected_bank_score, income_bracket')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (comps) setComparisons(comps as Comparison[]);
+
+      setLoading(false);
+    }
+    load();
   }, []);
 
-  /** Redirige vers /comparateur si consentement déjà donné, sinon /consent */
   const goToComparateur = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const uid = session?.user?.id;
@@ -36,23 +67,81 @@ export default function DashboardHomePage() {
     router.push(hasConsent ? '/comparateur' : '/consent');
   };
 
-  const name = userData?.full_name ?? 'Utilisateur';
+  const name         = userData?.full_name ?? userData?.email ?? 'Utilisateur';
+  const lastComp     = comparisons[0];
+  const totalComps   = comparisons.length;
+
+  // Économies estimées : 2% du revenu mensuel * 12
+  const savings = userData?.monthly_income
+    ? Math.round(userData.monthly_income * 0.02 * 12).toLocaleString('fr-FR') + ' FCFA/an'
+    : '—';
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
+      {/* Salutation */}
       <div className="mb-10">
         <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">
-          Bonjour, <span className="text-[color:var(--color-fintech-blue)]">{name}</span> 👋
+          Bonjour, <span className="text-[color:var(--color-fintech-blue)]">
+            {name.split(' ')[0]}
+          </span> 👋
         </h1>
-        <p className="text-slate-500 font-bold mt-2">Votre espace bancaire personnalisé</p>
+        <p className="text-slate-500 font-bold mt-2">Votre espace bancaire personnalisé — UEMOA 2026</p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-        <KpiCard icon={<TrendingUp size={28} />} label="Économies potentielles" value="120 000 F/an" color="bg-blue-50 text-[color:var(--color-fintech-blue)]" />
-        <KpiCard icon={<FileText size={28} />}   label="Comparaisons réalisées" value="1"              color="bg-green-50 text-green-600" />
-        <KpiCard icon={<ShieldCheck size={28} />} label="Données sécurisées"   value="BCEAO 2026"      color="bg-purple-50 text-purple-600" />
+        <KpiCard
+          icon={<TrendingUp size={28} />}
+          label="Économies potentielles"
+          value={loading ? '…' : savings}
+          color="bg-blue-50 text-[color:var(--color-fintech-blue)]"
+        />
+        <KpiCard
+          icon={<FileText size={28} />}
+          label="Comparaisons réalisées"
+          value={loading ? '…' : String(totalComps)}
+          color="bg-green-50 text-green-600"
+        />
+        <KpiCard
+          icon={<ShieldCheck size={28} />}
+          label="Données sécurisées"
+          value="BCEAO 2026"
+          color="bg-purple-50 text-purple-600"
+        />
       </div>
+
+      {/* Dernière comparaison */}
+      {lastComp && (
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 mb-8">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <Trophy size={12} className="text-amber-400" /> Dernière recommandation
+          </p>
+          <div className="flex items-center gap-4">
+            <Image
+              src={LOGO(lastComp.selected_bank_code)}
+              alt={lastComp.selected_bank_name}
+              width={48} height={48}
+              className="h-12 w-auto object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+            <div className="flex-1">
+              <p className="font-black text-slate-900 text-lg">{lastComp.selected_bank_name}</p>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-[color:var(--color-fintech-blue)] font-black">{lastComp.selected_bank_score}% compatibilité</span>
+                <span className="text-slate-300">·</span>
+                <span className="text-slate-400 text-sm font-bold flex items-center gap-1">
+                  <Calendar size={12} />
+                  {new Date(lastComp.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
+              </div>
+            </div>
+            <button onClick={() => router.push('/dashboard/recommandations')}
+              className="text-slate-400 hover:text-[color:var(--color-fintech-blue)] transition-colors">
+              <ChevronRight size={24} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Actions rapides */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -536,11 +536,11 @@ export default function ProspectFormPage() {
                       { name: 'partenariat_ifc',   label: 'Partenaire IFC',   sub: 'International Finance Corporation' },
                     ].map(p => (
                       <label key={p.name} className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                        (formData as Record<string, unknown>)[p.name]
+                        (formData as unknown as Record<string, unknown>)[p.name]
                           ? 'border-purple-400 bg-purple-50'
                           : 'border-slate-100 bg-white hover:border-purple-200'
                       }`}>
-                        <input type="checkbox" name={p.name} checked={!!(formData as Record<string, unknown>)[p.name]}
+                        <input type="checkbox" name={p.name} checked={!!(formData as unknown as Record<string, unknown>)[p.name]}
                           onChange={handleChange} className="mt-1 w-5 h-5 accent-purple-600" />
                         <div>
                           <p className="font-black text-sm text-slate-800">{p.label}</p>

@@ -307,10 +307,7 @@ function ResultsContent() {
             <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 mb-8">
               <p className="text-amber-800 font-black text-sm uppercase tracking-widest mb-2">⚠️ Avant de confirmer</p>
               <p className="text-slate-700 font-medium leading-relaxed text-[15px]">
-                En cliquant sur <strong>CONFIRMATION</strong>, vous autorisez
-                CompareTaBanque à transmettre votre dossier et vos informations
-                financières à <strong>{pendingBank.name}</strong> afin qu'un
-                conseiller puisse vous recontacter.
+                Vous autorisez CompareTaBanque à transmettre votre dossier à <strong>{pendingBank.name}</strong>.
               </p>
             </div>
 
@@ -354,7 +351,7 @@ function ResultsContent() {
 
             <p className="text-center text-[10px] text-slate-400 font-bold mt-4 flex items-center justify-center gap-1">
               <ShieldCheck size={12} className="text-[color:var(--color-fintech-accent)]" />
-              Données transmises de manière sécurisée · Standard BCEAO 2026
+              Données sécurisées
             </p>
           </div>
         </div>
@@ -453,7 +450,7 @@ function ResultsContent() {
 
         <div className="mt-20 text-center opacity-70 px-6">
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] leading-relaxed max-w-2xl mx-auto">
-            Plateforme certifiée Standard UEMOA 2026. Données conformes à la Directive 07/2010/CM/UEMOA.
+            Données sécurisées · Plateforme de Conseil Financier Indépendante · Zone UEMOA
           </p>
         </div>
       </div>

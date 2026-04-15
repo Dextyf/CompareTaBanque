@@ -112,7 +112,7 @@ export default function DashboardHomePage() {
         <KpiCard
           icon={<ShieldCheck size={28} />}
           label="Données sécurisées"
-          value="BCEAO 2026"
+          value="✓ Certifiées"
           color="bg-purple-50 text-purple-600"
         />
       </div>

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CheckCircle2, TrendingUp, Sparkles, Trophy,
   MessageSquare, ShieldAlert, Zap, Percent, ShieldCheck,
-  Activity, CreditCard, Wallet, Landmark, Loader2,
+  Activity, CreditCard, Wallet, Landmark, Loader2, X,
 } from 'lucide-react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
@@ -58,6 +58,7 @@ function ResultsContent() {
   const [submitting,    setSubmitting]    = useState(false);
   const [leadConfirmed, setLeadConfirmed] = useState<{ name: string; code: string } | null>(null);
   const [comparisonId,  setComparisonId]  = useState<string | null>(null);
+  const [pendingBank,   setPendingBank]   = useState<ScoredBank | null>(null); // modale confirmation
   const savedRef = useRef(false); // évite la double-sauvegarde
 
   useEffect(() => {
@@ -260,6 +261,105 @@ function ResultsContent() {
   const displayProfil = profile.company_type === 'PME' ? 'PME/ENT' : 'PARTICULIER';
 
   return (
+    <>
+    {/* ── Modale de confirmation avant transmission ─────────── */}
+    {pendingBank && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+        onClick={e => { if (e.target === e.currentTarget) setPendingBank(null); }}
+      >
+        <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg overflow-hidden [animation:var(--animate-fadeIn)]">
+
+          {/* Header modale */}
+          <div className="bg-[color:var(--color-fintech-dark)] px-10 py-8 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-[color:var(--color-fintech-accent)] p-3 rounded-2xl">
+                <Landmark size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Confirmation requise</p>
+                <p className="text-white font-black text-lg">{pendingBank.name}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setPendingBank(null)}
+              className="text-slate-400 hover:text-white transition-colors bg-white/10 hover:bg-red-500/30 p-2 rounded-xl"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Corps modale */}
+          <div className="p-10">
+            {/* Logo + score banque */}
+            <div className="flex items-center gap-5 mb-8 p-5 bg-slate-50 rounded-3xl border border-slate-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={pendingBank.logo} alt={pendingBank.name}
+                style={{ height: 56, width: 'auto', maxWidth: 120, objectFit: 'contain' }} />
+              <div>
+                <p className="font-black text-slate-900 text-xl">{pendingBank.name}</p>
+                <p className="text-[color:var(--color-fintech-blue)] font-black text-2xl">{pendingBank.score}% compatibilité</p>
+              </div>
+            </div>
+
+            {/* Message explicatif */}
+            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 mb-8">
+              <p className="text-amber-800 font-black text-sm uppercase tracking-widest mb-2">⚠️ Avant de confirmer</p>
+              <p className="text-slate-700 font-medium leading-relaxed text-[15px]">
+                En cliquant sur <strong>CONFIRMATION</strong>, vous autorisez
+                CompareTaBanque à transmettre votre dossier et vos informations
+                financières à <strong>{pendingBank.name}</strong> afin qu'un
+                conseiller puisse vous recontacter.
+              </p>
+            </div>
+
+            {/* Données qui seront transmises */}
+            <div className="mb-8 space-y-2">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Informations transmises</p>
+              {[
+                ['Identité', String(profile.full_name ?? '—')],
+                ['Contact',  `${String((profile as Record<string,unknown>).email ?? '—')} · ${String((profile as Record<string,unknown>).phone ?? '—')}`],
+                ['Profil',   displayProfil],
+                ...(profile.needs_credit !== 'no'
+                  ? [['Montant crédit', `${displayMontant} FCFA — ${profile.type_credit ?? ''}`]]
+                  : [['Besoin', 'Compte & Services bancaires']]),
+              ].map(([label, val]) => (
+                <div key={label} className="flex justify-between text-sm border-b border-slate-100 pb-2">
+                  <span className="text-slate-400 font-bold">{label}</span>
+                  <span className="text-slate-800 font-black text-right max-w-[60%] truncate">{val}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Boutons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => setPendingBank(null)}
+                className="flex-1 py-4 rounded-2xl border-2 border-slate-200 text-slate-600 font-black hover:bg-slate-50 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => { setPendingBank(null); handleSelectBank(pendingBank); }}
+                disabled={submitting}
+                className="flex-1 py-4 rounded-2xl bg-[color:var(--color-fintech-blue)] text-white font-black text-lg hover:bg-slate-900 transition-all shadow-xl disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {submitting
+                  ? <><Loader2 size={18} className="[animation:var(--animate-spin)]" /> Envoi…</>
+                  : <><CheckCircle2 size={18} /> CONFIRMATION</>
+                }
+              </button>
+            </div>
+
+            <p className="text-center text-[10px] text-slate-400 font-bold mt-4 flex items-center justify-center gap-1">
+              <ShieldCheck size={12} className="text-[color:var(--color-fintech-accent)]" />
+              Données transmises de manière sécurisée · Standard BCEAO 2026
+            </p>
+          </div>
+        </div>
+      </div>
+    )}
     <div className="min-h-screen bg-slate-50 font-sans pb-32 overflow-x-hidden">
 
       {/* ── Header ────────────────────────────────────────────── */}
@@ -311,7 +411,7 @@ function ResultsContent() {
                 index={index}
                 profile={profile}
                 submitting={submitting}
-                onSelect={() => handleSelectBank(rec)}
+                onSelect={() => setPendingBank(rec)}
               />
             ))
           ) : (
@@ -358,6 +458,7 @@ function ResultsContent() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

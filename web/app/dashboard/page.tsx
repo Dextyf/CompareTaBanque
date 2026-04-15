@@ -30,6 +30,7 @@ export default function DashboardHomePage() {
   const supabase = createClient();
   const [userData,     setUserData]     = useState<ProspectData | null>(null);
   const [comparisons,  setComparisons]  = useState<Comparison[]>([]);
+  const [totalCount,   setTotalCount]   = useState<number>(0);
   const [loading,      setLoading]      = useState(true);
 
   useEffect(() => {
@@ -47,13 +48,19 @@ export default function DashboardHomePage() {
         .single();
       if (prospect) setUserData(prospect);
 
-      // Historique comparaisons
-      const { data: comps } = await supabase
-        .from('user_comparisons')
-        .select('id, created_at, selected_bank_name, selected_bank_code, selected_bank_score, income_bracket')
-        .order('created_at', { ascending: false })
-        .limit(5);
+      // Historique comparaisons — 5 dernières pour affichage + count total
+      const [{ data: comps }, { count: totalCount }] = await Promise.all([
+        supabase
+          .from('user_comparisons')
+          .select('id, created_at, selected_bank_name, selected_bank_code, selected_bank_score, income_bracket')
+          .order('created_at', { ascending: false })
+          .limit(5),
+        supabase
+          .from('user_comparisons')
+          .select('*', { count: 'exact', head: true }),
+      ]);
       if (comps) setComparisons(comps as Comparison[]);
+      if (totalCount !== null) setTotalCount(totalCount);
 
       setLoading(false);
     }
@@ -67,9 +74,9 @@ export default function DashboardHomePage() {
     router.push(hasConsent ? '/comparateur' : '/consent');
   };
 
-  const name         = userData?.full_name ?? userData?.email ?? 'Utilisateur';
-  const lastComp     = comparisons[0];
-  const totalComps   = comparisons.length;
+  const name       = userData?.full_name ?? userData?.email ?? 'Utilisateur';
+  const lastComp   = comparisons[0];
+  const totalComps = totalCount; // count réel depuis Supabase
 
   // Économies estimées : 2% du revenu mensuel * 12
   const savings = userData?.monthly_income

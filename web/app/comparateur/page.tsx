@@ -112,6 +112,16 @@ export default function ProspectFormPage() {
 
   const isPME = formData.company_type === 'PME';
 
+  // ── Validation : champs obligatoires avant lancer le scoring ──
+  const missingFields: string[] = [];
+  if (!formData.full_name.trim())   missingFields.push('Nom complet');
+  if (!formData.email.trim())       missingFields.push('Email');
+  if (!isPME && !formData.monthly_income.trim()) missingFields.push('Revenu mensuel');
+  if (isPME  && !formData.chiffre_affaires.trim()) missingFields.push('Chiffre d\'affaires');
+  if (formData.needs_credit === 'yes' && !formData.montant_demande.trim())
+    missingFields.push('Montant du crédit');
+  const isFormValid = missingFields.length === 0;
+
   const set = (field: keyof FormData, value: unknown) =>
     setFormData(prev => ({ ...prev, [field]: value }));
 
@@ -564,8 +574,21 @@ export default function ProspectFormPage() {
               </div>
 
               <div className="mt-12">
-                <button type="submit" disabled={isSubmitting}
-                  className="w-full bg-slate-900 text-white py-8 rounded-[3rem] font-black text-2xl shadow-2xl hover:bg-[color:var(--color-fintech-blue)] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-4 group">
+                {/* Champs manquants */}
+                {!isFormValid && !isSubmitting && (
+                  <div className="mb-6 bg-orange-50 border border-orange-200 rounded-3xl px-6 py-4 flex flex-wrap gap-2 items-center">
+                    <span className="text-orange-700 font-black text-xs uppercase tracking-widest shrink-0">Champs requis :</span>
+                    {missingFields.map(f => (
+                      <span key={f} className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">{f}</span>
+                    ))}
+                  </div>
+                )}
+                <button type="submit" disabled={isSubmitting || !isFormValid}
+                  className={`w-full py-8 rounded-[3rem] font-black text-2xl shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-4 group ${
+                    isFormValid && !isSubmitting
+                      ? 'bg-slate-900 text-white hover:bg-[color:var(--color-fintech-blue)] cursor-pointer'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-70'
+                  }`}>
                   {isSubmitting
                     ? 'Calcul du matching IA...'
                     : <>Lancer le Scoring IA v2.0 <ChevronRight className="group-hover:translate-x-3 transition-all" size={32} /></>

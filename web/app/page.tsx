@@ -162,7 +162,7 @@ export default function Home() {
                 Optimisez vos frais, trouvez le meilleur taux de Crédit Immobilier et profitez d&apos;une épargne optimale.
               </p>
               <button
-                onClick={() => router.push('/auth')}
+                onClick={goToComparateur}
                 className="text-white bg-white/10 hover:bg-[color:var(--color-fintech-accent)] px-8 py-4 rounded-2xl font-black transition-all flex items-center gap-3"
               >
                 Simulation Personnelle <ChevronRight size={20} />
@@ -234,7 +234,7 @@ export default function Home() {
           Rejoignez des milliers de clients qui ont économisé plus de 120 000 FCFA/an sur leurs frais bancaires.
         </p>
         <button
-          onClick={() => router.push('/auth')}
+          onClick={goToComparateur}
           className="inline-flex items-center gap-3 bg-[color:var(--color-fintech-accent)] text-white px-12 py-6 rounded-full font-black text-xl hover:bg-white hover:text-slate-900 transition-all shadow-2xl active:scale-95"
         >
           Commencer gratuitement <ChevronRight size={24} />

@@ -57,6 +57,8 @@ function ResultsContent() {
   const [loading,       setLoading]       = useState(true);
   const [submitting,    setSubmitting]    = useState(false);
   const [leadConfirmed, setLeadConfirmed] = useState<{ name: string; code: string } | null>(null);
+  const [comparisonId,  setComparisonId]  = useState<string | null>(null);
+  const savedRef = { current: false }; // évite la double-sauvegarde
 
   useEffect(() => {
     const t = setTimeout(() => setAnalyzing(false), 3200);
@@ -87,7 +89,38 @@ function ResultsContent() {
           banking_tariffs: Array.isArray(b.banking_tariffs) ? b.banking_tariffs as import('@/lib/scoring').BankTariff[] : [],
           is_partner: b.is_partner,
         }));
-        setBanks(scoreBanks(mapped, profile).sort((a, b) => b.score - a.score).slice(0, 3));
+        const scored = scoreBanks(mapped, profile).sort((a, b) => b.score - a.score).slice(0, 3);
+        setBanks(scored);
+
+        // ── Auto-save : dès que le scoring est prêt, on enregistre ──
+        if (!savedRef.current && scored.length > 0) {
+          savedRef.current = true;
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const income = parseInt(String(
+              profile.monthly_income ?? (Number(profile.chiffre_affaires ?? 0) / 12)
+            )) || 0;
+            const top = scored[0];
+            const { data: saved } = await supabase
+              .from('user_comparisons')
+              .insert({
+                auth_user_id:        user.id,
+                prospect_id:         prospectId ?? null,
+                profile_snapshot:    profile,
+                top_banks:           scored.map(b => ({
+                  name: b.name, code: b.code, score: b.score,
+                  probabilite: b.probabilite, taux_estime: b.taux_estime,
+                })),
+                selected_bank_name:  top.name,
+                selected_bank_code:  top.code,
+                selected_bank_score: top.score,
+                income_bracket:      getIncomeBracket(income),
+              })
+              .select('id')
+              .single();
+            if (saved?.id) setComparisonId(saved.id);
+          }
+        }
       }
     } catch (err) {
       console.error('Erreur fetch:', err);
@@ -105,7 +138,6 @@ function ResultsContent() {
 
     // Payload complet pour la notification email
     const notifyPayload = {
-      // Prospect
       full_name:        profile.full_name        ?? '',
       email:            (profile as Record<string,unknown>).email ?? '',
       phone:            (profile as Record<string,unknown>).phone ?? '',
@@ -116,37 +148,46 @@ function ResultsContent() {
       needs_credit:     profile.needs_credit     ?? '',
       montant_demande:  profile.montant_demande  ?? 0,
       type_credit:      profile.type_credit      ?? '',
-      // Banque choisie
       bank_id:          rec.id,
       bank_name:        rec.name,
       bank_code:        rec.code,
-      // Résultats scoring
       score:            rec.score,
       probabilite:      rec.probabilite,
       comment:          rec.comment,
       taux_estime:      rec.taux_estime,
-      // Meta
       prospect_id:      prospectId ?? null,
       income_bracket:   getIncomeBracket(income),
     };
 
     try {
-      // Sauvegarde de la comparaison dans Supabase
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await supabase.from('user_comparisons').insert({
-          auth_user_id:       session.user.id,
-          prospect_id:        prospectId ?? null,
-          profile_snapshot:   profile,
-          top_banks:          banks.map(b => ({
-            name: b.name, code: b.code, score: b.score,
-            probabilite: b.probabilite, taux_estime: b.taux_estime,
-          })),
-          selected_bank_name:  rec.name,
-          selected_bank_code:  rec.code,
-          selected_bank_score: rec.score,
-          income_bracket:      getIncomeBracket(income),
-        });
+      // Met à jour la banque choisie si auto-save a déjà créé l'enregistrement
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        if (comparisonId) {
+          await supabase
+            .from('user_comparisons')
+            .update({
+              selected_bank_name:  rec.name,
+              selected_bank_code:  rec.code,
+              selected_bank_score: rec.score,
+            })
+            .eq('id', comparisonId);
+        } else {
+          // Fallback si auto-save n'a pas pu créer l'enregistrement
+          await supabase.from('user_comparisons').insert({
+            auth_user_id:        user.id,
+            prospect_id:         prospectId ?? null,
+            profile_snapshot:    profile,
+            top_banks:           banks.map(b => ({
+              name: b.name, code: b.code, score: b.score,
+              probabilite: b.probabilite, taux_estime: b.taux_estime,
+            })),
+            selected_bank_name:  rec.name,
+            selected_bank_code:  rec.code,
+            selected_bank_score: rec.score,
+            income_bracket:      getIncomeBracket(income),
+          });
+        }
       }
 
       // Envoi email de notification (sans bloquer l'UX)
@@ -367,7 +408,7 @@ function BankCard({
       <div className="p-10 md:p-12 text-center border-b border-slate-50 bg-gradient-to-b from-slate-50/20 to-white">
         <div className="h-24 md:h-28 flex items-center justify-center mb-8 bg-white rounded-[2.5rem] p-6 w-full shadow-lg border border-slate-50">
           {rec.logo
-            ? <Image src={rec.logo} alt={rec.name} width={160} height={80} className="max-h-full object-contain" />
+            ? <Image src={rec.logo} alt={rec.name} width={160} height={80} className="max-h-full object-contain" unoptimized />
             : <span className="text-2xl font-black text-slate-400">{rec.code}</span>
           }
         </div>

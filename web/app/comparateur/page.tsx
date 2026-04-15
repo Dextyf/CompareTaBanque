@@ -138,7 +138,7 @@ export default function ProspectFormPage() {
           : formData.monthly_income || '0'
       );
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
 
       const { data, error } = await supabase
         .from('prospects')
@@ -146,13 +146,12 @@ export default function ProspectFormPage() {
           email:          formData.email,
           phone:          formData.phone,
           full_name:      formData.full_name,
-          account_type:   isPME ? 'entreprise' : 'particulier',
           monthly_income: income,
           company_type:   isPME ? formData.type_pme : formData.statut,
           needs_credit:   formData.needs_credit,
           consent_given:  true,
           consent_date:   new Date().toISOString(),
-          auth_user_id:   session?.user?.id ?? null,
+          auth_user_id:   user?.id ?? null,
         })
         .select('id')
         .single();

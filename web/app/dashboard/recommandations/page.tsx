@@ -139,6 +139,7 @@ export default function RecommandationsPage() {
                       alt={c.selected_bank_name}
                       width={32} height={32}
                       className="h-7 w-auto object-contain"
+                      unoptimized
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
                     <p className="font-black text-slate-900 text-sm">{c.selected_bank_name}</p>
@@ -167,7 +168,8 @@ export default function RecommandationsPage() {
                         <div className="flex items-center gap-1.5">
                           <Image src={LOGO(bank.code)} alt={bank.name} width={20} height={20}
                             className="h-5 w-auto object-contain"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                            unoptimized
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           <p className="font-black text-slate-800 text-xs truncate">{bank.name}</p>
                         </div>
                         <div className="flex items-center gap-1 mt-1">

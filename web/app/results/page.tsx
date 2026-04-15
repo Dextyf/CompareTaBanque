@@ -11,8 +11,6 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { scoreBanks, type ScoredBank, type Profile } from '@/lib/scoring';
 
-const N8N_WEBHOOK_URL = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL;
-
 function getIncomeBracket(income: number): string {
   if (income <= 250000)  return '0-250k';
   if (income <= 600000)  return '250k-600k';

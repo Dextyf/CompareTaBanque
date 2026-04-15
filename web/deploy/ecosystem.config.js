@@ -14,10 +14,12 @@ module.exports = {
       env: {
         NODE_ENV:                      'production',
         PORT:                          3000,
-        NEXT_PUBLIC_SUPABASE_URL:      'https://trlqyfjrmixeuiaotwii.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRybHF5ZmpybWl4ZXVpYW90d2lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NzI2NDcsImV4cCI6MjA5MTE0ODY0N30.d9ju4AU0QkI5aLeNHC99bbCXj6ky7skYaluOe7I5cLY',
-        NEXT_PUBLIC_N8N_WEBHOOK_URL:   'https://comparetabanque.app.n8n.cloud/webhook-test/lead-creation',
-        RESEND_API_KEY:                're_VgoWuKRH_LaixRf1svVbEb23ZdFtMYnYE',
+        // ⚠️ Remplir ces valeurs sur le serveur via .env.production
+        // Ne jamais committer les clés ici
+        NEXT_PUBLIC_SUPABASE_URL:      process.env.NEXT_PUBLIC_SUPABASE_URL      || '',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+        NEXT_PUBLIC_N8N_WEBHOOK_URL:   process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL   || '',
+        RESEND_API_KEY:                process.env.RESEND_API_KEY                 || '',
       },
     },
   ],

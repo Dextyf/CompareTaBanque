@@ -42,10 +42,12 @@ export default function RecommandationsPage() {
   const [loading,     setLoading]     = useState(true);
 
   const goToComparateur = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const uid = session?.user?.id;
-    const hasConsent = uid && localStorage.getItem(`ctb_consent_${uid}`) === 'granted';
-    router.push(hasConsent ? '/comparateur' : '/consent');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { router.push('/auth'); return; }
+      const hasConsent = localStorage.getItem(`ctb_consent_${session.user.id}`) === 'granted';
+      router.push(hasConsent ? '/comparateur' : '/consent');
+    } catch { router.push('/auth'); }
   };
 
   useEffect(() => {

@@ -132,7 +132,7 @@ export default function SettingsPage() {
                 />
                 <InfoRow
                   label="Besoin crédit"
-                  value={prospect.needs_credit ? 'Oui' : 'Non — Compte & Services'}
+                  value={prospect.needs_credit && String(prospect.needs_credit) !== 'no' ? 'Oui' : 'Non — Compte & Services'}
                   icon={<ShieldCheck size={16} />}
                 />
               </div>

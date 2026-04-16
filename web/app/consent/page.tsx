@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Lock, ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -16,6 +16,13 @@ export default function ConsentGatePage() {
     case3: false, // Optionnel  — alertes
     case4: false, // Optionnel  — IA/historique
   });
+
+  // Garde d'authentification — redirige si pas de session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) router.push('/auth');
+    });
+  }, []);
 
   const isDisabled = !consents.case1 || !consents.case2;
 

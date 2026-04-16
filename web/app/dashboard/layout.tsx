@@ -28,11 +28,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) setUserData({ email: session.user.email ?? '' });
+      if (!session?.user) { router.push('/auth'); return; }
+
+      setUserData({ email: session.user.email ?? '' });
 
       const { data } = await supabase
         .from('prospects')
         .select('full_name, email')
+        .eq('auth_user_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();

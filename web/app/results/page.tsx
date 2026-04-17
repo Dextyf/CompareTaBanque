@@ -68,19 +68,25 @@ function ResultsContent() {
   const [expertDesc,      setExpertDesc]      = useState('');
   const [expertSending,   setExpertSending]   = useState(false);
   const [expertSent,      setExpertSent]      = useState(false);
+  const [expertError,     setExpertError]     = useState('');
 
   const sendExpertRequest = async () => {
     if (!expertEmail.trim() || !expertMotif.trim() || !expertDesc.trim()) return;
     setExpertSending(true);
+    setExpertError('');
     try {
-      await fetch('/api/contact-expert', {
+      const res = await fetch('/api/contact-expert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: expertEmail, motif: expertMotif, description: expertDesc }),
       });
-      setExpertSent(true);
+      if (res.ok) {
+        setExpertSent(true);
+      } else {
+        setExpertError('Erreur lors de l\'envoi. Réessayez dans quelques instants.');
+      }
     } catch {
-      setExpertSent(true); // on ferme quand même
+      setExpertError('Connexion impossible. Vérifiez votre réseau et réessayez.');
     } finally {
       setExpertSending(false);
     }
@@ -318,7 +324,7 @@ function ResultsContent() {
             {/* Logo + score */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', padding: '16px', background: '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={pendingBank.logo} alt={pendingBank.name} style={{ height: 52, width: 'auto', maxWidth: 110, objectFit: 'contain' }} />
+              <img src={`${pendingBank.logo}?v=3`} alt={pendingBank.name} style={{ height: 52, width: 'auto', maxWidth: 110, objectFit: 'contain' }} />
               <div>
                 <p style={{ fontWeight: 900, color: '#0f172a', fontSize: '18px', margin: '0 0 4px' }}>{pendingBank.name}</p>
                 <p style={{ fontWeight: 900, color: '#005596', fontSize: '22px', margin: 0 }}>{pendingBank.score}% compatibilité</p>
@@ -563,6 +569,13 @@ function ResultsContent() {
                 />
               </label>
 
+              {/* Message d'erreur */}
+              {expertError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px', color: '#dc2626', fontSize: '13px', fontWeight: 700 }}>
+                  ⚠️ {expertError}
+                </div>
+              )}
+
               {/* Bouton envoyer */}
               <button
                 onClick={sendExpertRequest}
@@ -618,6 +631,7 @@ function BankCard({
 }) {
   const isTop = index === 0;
   const noCredit = profile.needs_credit === 'no';
+  const [logoFailed, setLogoFailed] = useState(false);
   return (
     <div className={`bg-white rounded-[4.5rem] shadow-2xl overflow-hidden flex flex-col border-2 transform transition-all duration-700 hover:-translate-y-6 ${
       isTop
@@ -636,10 +650,12 @@ function BankCard({
           className="h-24 md:h-28 flex items-center justify-center mb-8 rounded-[2.5rem] p-6 w-full shadow-lg"
           style={{ background: '#fff', border: '1px solid #f1f5f9' }}
         >
-          {rec.logo
+          {rec.logo && !logoFailed
             /* eslint-disable-next-line @next/next/no-img-element */
-            ? <img src={rec.logo} alt={rec.name} style={{ maxHeight: '100%', width: 'auto', objectFit: 'contain' }} />
-            : <span style={{ fontSize: '22px', fontWeight: 900, color: '#94a3b8' }}>{rec.code}</span>
+            ? <img src={`${rec.logo}?v=3`} alt={rec.name}
+                style={{ maxHeight: '100%', width: 'auto', objectFit: 'contain' }}
+                onError={() => setLogoFailed(true)} />
+            : <span style={{ fontSize: '13px', fontWeight: 900, color: '#475569', textAlign: 'center', lineHeight: 1.3 }}>{rec.name}</span>
           }
         </div>
         <h3 className="font-black text-slate-900 text-3xl mb-1 tracking-tight">{rec.name}</h3>

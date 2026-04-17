@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+// Destination email — configurable via variable d'environnement Vercel
+const DEST_EMAIL = process.env.EXPERT_EMAIL ?? 'sakidesireluc@gmail.com';
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     const { error } = await resend.emails.send({
       from:     'CompareTaBanque <onboarding@resend.dev>',
-      to:       [process.env.EXPERT_EMAIL!],
+      to:       [DEST_EMAIL],
       replyTo:  email,
       subject:  `[Expert CTB] ${motif}`,
       html: `

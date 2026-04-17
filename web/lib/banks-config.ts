@@ -32,7 +32,7 @@ export const PARTNER_BANKS: BankEntry[] = [
   { code: 'SGCI',   name: 'SGBCI',             logo: '/logos/sgbci.png',  zone: 'UEMOA' },
   { code: 'BICICI', name: 'BICICI',             logo: '/logos/bicici.png', zone: 'UEMOA' },
   { code: 'BDU',    name: 'BDU-CI',            logo: '/logos/bdu.png',    zone: 'UEMOA' },
-  { code: 'BRIDGE', name: 'Bridge Bank Group', logo: '/logos/bridge.png', zone: 'UEMOA' },
+  { code: 'BRIDGE', name: 'Bridge Bank Group', logo: '/logos/bridge.png?v=3', zone: 'UEMOA' },
   // ── Ajouter ici les futures banques ────────────────
   // { code: 'ORABANK', name: 'Orabank',  logo: '/logos/orabank.png', zone: 'UEMOA' },
   // { code: 'GTB',     name: 'GTBank',   logo: '/logos/gtb.png',     zone: 'UEMOA' },

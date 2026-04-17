@@ -29,7 +29,7 @@ function translateError(msg?: string) {
 }
 
 type Mode = 'login' | 'signup' | 'forgot' | 'reset';
-type Msg  = { type: 'success' | 'error'; text: string };
+type Msg  = { type: 'success' | 'error' | 'warning'; text: string; action?: { label: string; onClick: () => void } };
 
 export default function AuthPage() {
   const router  = useRouter();
@@ -58,14 +58,13 @@ export default function AuthPage() {
     }
   }, []);
 
-  // Redirige si déjà connecté
+  // Redirige si déjà connecté → retour à l'accueil (NavBar passe en mode connecté)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         const email = session.user.email?.toLowerCase() ?? '';
         if (ADMIN_EMAILS.includes(email)) { router.push('/admin'); return; }
-        const hasConsent = localStorage.getItem(`ctb_consent_${session.user.id}`) === 'granted';
-        router.push(hasConsent ? '/' : '/consent');
+        router.push('/');
       }
     });
   }, []);
@@ -86,8 +85,29 @@ export default function AuthPage() {
     setMessage(null);
     try {
       if (mode === 'login') {
+        const emailLower = form.email.trim().toLowerCase();
+
+        // Vérification préalable : l'email existe-t-il ?
+        const { data: exists } = await supabase.rpc('email_exists', { check_email: emailLower });
+        if (exists === false) {
+          setMessage({
+            type: 'warning',
+            text: 'Aucun compte associé à cet email. Inscrivez-vous d\'abord pour accéder à la plateforme.',
+            action: {
+              label: 'Créer un compte',
+              onClick: () => {
+                setMode('signup');
+                setMessage(null);
+                setForm(prev => ({ ...prev, password: '', confirmPassword: '' }));
+              },
+            },
+          });
+          setLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase.auth.signInWithPassword({
-          email:    form.email.trim().toLowerCase(),
+          email:    emailLower,
           password: form.password,
         });
         if (error) throw error;
@@ -105,9 +125,8 @@ export default function AuthPage() {
 
         if (ADMIN_EMAILS.includes(email)) { router.push('/admin'); return; }
 
-        // Vérifier consentement existant → éviter de le redemander
-        const hasConsent = localStorage.getItem(`ctb_consent_${uid}`) === 'granted';
-        router.push(hasConsent ? '/' : '/consent');
+        // Utilisateur déjà inscrit → retour à l'accueil en mode connecté
+        router.push('/');
       } else {
         const redirectTo = `${window.location.origin}/auth/callback`;
         const { data, error } = await supabase.auth.signUp({
@@ -124,8 +143,9 @@ export default function AuthPage() {
         }).catch(() => {/* non bloquant */});
 
         if (data.session) {
-          // Session déjà disponible → redirection directe
-          router.push('/consent');
+          // Session déjà disponible → accueil connecté
+          sessionStorage.setItem(`ctb_tab_${data.session.user.id}`, 'true');
+          router.push('/');
         } else {
           // Trigger DB auto-confirme l'email → connexion immédiate sans attendre l'email
           const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
@@ -137,12 +157,13 @@ export default function AuthPage() {
             const email = loginData.user.email?.toLowerCase() ?? '';
             sessionStorage.setItem(`ctb_tab_${uid}`, 'true');
             if (ADMIN_EMAILS.includes(email)) { router.push('/admin'); return; }
-            router.push('/consent');
+            // Nouveau compte → retour à l'accueil en mode connecté (NavBar = Dashboard + Déconnexion)
+            router.push('/');
           } else {
             // Fallback si la connexion auto échoue
             setMessage({
               type: 'success',
-              text: '✅ Compte créé ! Un email de bienvenue vous a été envoyé. Connectez-vous maintenant avec vos identifiants.',
+              text: '✅ Compte créé ! Connectez-vous maintenant avec vos identifiants.',
             });
           }
         }
@@ -264,16 +285,31 @@ export default function AuthPage() {
 
           {/* Message feedback */}
           {message && (
-            <div className={`p-5 rounded-[2rem] border text-sm font-bold flex items-start gap-3 ${
+            <div className={`p-5 rounded-[2rem] border text-sm font-bold flex flex-col gap-3 ${
               message.type === 'success'
                 ? 'bg-green-50 border-green-200 text-green-700'
+                : message.type === 'warning'
+                ? 'bg-amber-50 border-amber-200 text-amber-700'
                 : 'bg-red-50 border-red-200 text-red-600'
             }`}>
-              {message.type === 'success'
-                ? <CheckCircle2 size={20} className="text-green-500 shrink-0 mt-0.5" />
-                : <AlertCircle  size={20} className="text-red-500 shrink-0 mt-0.5" />
-              }
-              {message.text}
+              <div className="flex items-start gap-3">
+                {message.type === 'success'
+                  ? <CheckCircle2 size={20} className="text-green-500 shrink-0 mt-0.5" />
+                  : message.type === 'warning'
+                  ? <AlertCircle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+                  : <AlertCircle size={20} className="text-red-500 shrink-0 mt-0.5" />
+                }
+                <span className="flex-1">{message.text}</span>
+              </div>
+              {message.action && (
+                <button
+                  type="button"
+                  onClick={message.action.onClick}
+                  className="self-start bg-[color:var(--color-fintech-accent)] text-white px-5 py-2.5 rounded-full font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center gap-2"
+                >
+                  {message.action.label} <ArrowRight size={14} />
+                </button>
+              )}
             </div>
           )}
 

@@ -116,27 +116,35 @@ export default function AuthPage() {
           options:  { emailRedirectTo: redirectTo },
         });
         if (error) throw error;
+        // Email RGPD envoyé dans tous les cas (fire & forget)
+        fetch('/api/welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email.trim().toLowerCase() }),
+        }).catch(() => {/* non bloquant */});
+
         if (data.session) {
-          // Email auto-confirmé (ex : test local sans SMTP) → consent direct
-          // Envoyer quand même l'email de bienvenue RGPD (fire & forget)
-          fetch('/api/welcome-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: form.email.trim().toLowerCase() }),
-          }).catch(() => {/* non bloquant */});
+          // Session déjà disponible → redirection directe
           router.push('/consent');
         } else {
-          // Email de confirmation Supabase envoyé + email RGPD Resend (fire & forget)
-          fetch('/api/welcome-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: form.email.trim().toLowerCase() }),
-          }).catch(() => {/* non bloquant */});
-
-          setMessage({
-            type: 'success',
-            text: '✅ Compte créé ! Deux emails vous ont été envoyés : (1) un lien de confirmation à cliquer pour activer votre compte, (2) un récapitulatif de nos engagements RGPD. Vérifiez votre boîte mail.',
+          // Trigger DB auto-confirme l'email → connexion immédiate sans attendre l'email
+          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+            email:    form.email.trim().toLowerCase(),
+            password: form.password,
           });
+          if (!loginError && loginData.session) {
+            const uid   = loginData.user.id;
+            const email = loginData.user.email?.toLowerCase() ?? '';
+            sessionStorage.setItem(`ctb_tab_${uid}`, 'true');
+            if (ADMIN_EMAILS.includes(email)) { router.push('/admin'); return; }
+            router.push('/consent');
+          } else {
+            // Fallback si la connexion auto échoue
+            setMessage({
+              type: 'success',
+              text: '✅ Compte créé ! Un email de bienvenue vous a été envoyé. Connectez-vous maintenant avec vos identifiants.',
+            });
+          }
         }
       }
     } catch (err: unknown) {

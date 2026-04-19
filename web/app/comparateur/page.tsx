@@ -18,6 +18,7 @@ interface FormData {
   email: string;
   phone: string;
   age: string;
+  pays: string;
   // Type principal
   company_type: string;       // 'individual' | 'PME'
   // Particulier
@@ -53,7 +54,7 @@ interface FormData {
 }
 
 const INITIAL: FormData = {
-  full_name: '', email: '', phone: '', age: '30',
+  full_name: '', email: '', phone: '', age: '30', pays: 'Côte d\'Ivoire',
   company_type: 'individual',
   statut: 'salarié_privé', corps_fonction: '', anciennete_emploi: '1-3',
   secteur_salarie: 'prive',
@@ -99,6 +100,11 @@ const SECTEURS = [
   'Éducation / Formation', 'Finance / Assurance', 'Industrie / Manufacture',
   'Informatique / Numérique', 'Santé / Pharmacie', 'Services / Conseil',
   'Transport / Logistique', 'Tourisme / Hôtellerie', 'Autre',
+];
+
+const PAYS_UEMOA = [
+  'Bénin', 'Burkina Faso', 'Côte d\'Ivoire', 'Guinée-Bissau',
+  'Mali', 'Niger', 'Sénégal', 'Togo',
 ];
 
 /* ── Page principale ────────────────────────────────────────── */
@@ -567,10 +573,23 @@ export default function ProspectFormPage() {
 
             {/* ═══ SECTION 4 — Contact ═════════════════════════ */}
             <Section title="Finalisation & Contact" icon={<Handshake size={24} />} color="bg-orange-50 text-orange-600">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <FormInput label="Nom Complet" name="full_name" value={formData.full_name} onChange={handleChange} placeholder="Ex: Jean Luc Koné" />
                 <FormInput label="Email" name="email" value={formData.email} onChange={handleChange} type="email" placeholder="jean@mail.com" />
                 <FormInput label="Téléphone" name="phone" value={formData.phone} onChange={handleChange} type="tel" placeholder="07 00 00 00 00" />
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Pays</label>
+                  <select
+                    name="pays"
+                    value={formData.pays}
+                    onChange={e => setFormData(prev => ({ ...prev, pays: e.target.value }))}
+                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl font-black text-slate-800 focus:border-[color:var(--color-fintech-blue)] focus:bg-white outline-none transition-all"
+                  >
+                    {PAYS_UEMOA.map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="mt-12">

@@ -98,8 +98,8 @@ export default function Home() {
               <span className="text-[color:var(--color-fintech-accent)] italic">sur-mesure.</span>
             </h1>
             <p className="text-base md:text-xl text-slate-400 max-w-2xl mx-auto lg:mx-0 font-medium">
-              Comparez BNI, NSIA, SIB, SGBCI, Coris, BICICI, BDU et Bridge Bank en 2 minutes.
-              Notre IA identifie l&apos;offre imbattable pour votre profil parmi 8 banques.
+              Comparez BNI, NSIA, SIB, SGBCI, Coris, BICICI, BDU, Bridge Bank et bien d&apos;autres banques en 2 minutes.
+              Notre IA identifie l&apos;offre imbattable pour votre profil parmi nos partenaires UEMOA.
             </p>
             <div className="flex justify-center lg:justify-start">
               <button

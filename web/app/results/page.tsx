@@ -731,7 +731,7 @@ function BankCard({
         >
           {submitting
             ? <><Loader2 size={22} className="[animation:var(--animate-spin)]" /> Envoi en cours…</>
-            : noCredit ? 'Ouvrir mon compte' : 'Choisir cette banque'
+            : 'Choisir cette banque'
           }
         </button>
       </div>

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ChevronRight, Zap, CheckCircle2, TrendingUp,
   Activity, Wallet, ShieldCheck, Handshake, PieChart,
   Building2, User, Briefcase, GraduationCap, Stethoscope,
-  Shield, Store, Wrench,
+  Shield, Store, Wrench, Lock,
 } from 'lucide-react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
@@ -107,18 +107,49 @@ const PAYS_UEMOA = [
   'Mali', 'Niger', 'Sénégal', 'Togo',
 ];
 
+/* ── Steps config ───────────────────────────────────────────── */
+const STEPS = [
+  { num: 1, label: 'Structure & Profil',       short: 'Profil'    },
+  { num: 2, label: 'Finances & Intention',     short: 'Finances'  },
+  { num: 3, label: 'Qualité & Préparation',    short: 'Qualité'   },
+  { num: 4, label: 'Finalisation & Contact',   short: 'Contact'   },
+];
+
 /* ── Page principale ────────────────────────────────────────── */
 export default function ProspectFormPage() {
   const router   = useRouter();
   const supabase = createClient();
-  const qualiteSectionRef = useRef<HTMLDivElement>(null);
 
-  const [formData,    setFormData]    = useState<FormData>(INITIAL);
+  const [formData,     setFormData]     = useState<FormData>(INITIAL);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeStep,   setActiveStep]   = useState(1);
+
+  const sectionRefs = [
+    useRef<HTMLDivElement>(null), // section 1
+    useRef<HTMLDivElement>(null), // section 2
+    useRef<HTMLDivElement>(null), // section 3
+    useRef<HTMLDivElement>(null), // section 4
+  ];
+  const qualiteSectionRef = sectionRefs[2];
+
+  // ── IntersectionObserver: track active section ──────────────
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+    sectionRefs.forEach((ref, idx) => {
+      if (!ref.current) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) setActiveStep(idx + 1); },
+        { rootMargin: '-30% 0px -60% 0px', threshold: 0 }
+      );
+      obs.observe(ref.current);
+      observers.push(obs);
+    });
+    return () => observers.forEach(o => o.disconnect());
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isPME = formData.company_type === 'PME';
 
-  // ── Validation : champs obligatoires avant lancer le scoring ──
+  // ── Validation ───────────────────────────────────────────────
   const missingFields: string[] = [];
   if (!formData.full_name.trim())   missingFields.push('Nom complet');
   if (!formData.email.trim())       missingFields.push('Email');
@@ -143,6 +174,10 @@ export default function ProspectFormPage() {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
+
+  const scrollToStep = useCallback((stepNum: number) => {
+    sectionRefs[stepNum - 1]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,432 +230,540 @@ export default function ProspectFormPage() {
     }
   };
 
+  const progressPct = Math.round(((activeStep - 1) / (STEPS.length - 1)) * 100);
+
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-white">
 
       {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside className="hidden lg:flex lg:w-1/4 bg-[color:var(--color-fintech-dark)] relative overflow-hidden items-center justify-center p-12 border-r border-white/5 h-screen sticky top-0">
-        <div className="relative z-10 text-center">
-          <div className="bg-white/5 backdrop-blur-3xl p-10 rounded-[3rem] border border-white/10 shadow-2xl">
-            <div className="bg-[color:var(--color-fintech-accent)] w-20 h-20 rounded-3xl flex items-center justify-center text-white mb-8 mx-auto shadow-xl">
-              <Zap size={40} />
-            </div>
-            <h2 className="text-3xl font-black text-white mb-4 leading-tight">Matching IA v2.0 Actif</h2>
-            <p className="text-blue-100 text-sm font-bold uppercase tracking-widest opacity-70 italic">
-              Précision de scoring optimisée
-            </p>
-            <div className="mt-8 space-y-3 text-left">
-              {[
-                'Profil évalué en temps réel',
-                'Grilles tarifaires officielles',
-                'Score CPL automatique',
-                'Top 3 banques personnalisé',
-              ].map(item => (
-                <div key={item} className="flex items-center gap-3 text-sm text-blue-200/70 font-bold">
-                  <CheckCircle2 size={14} className="text-[color:var(--color-fintech-accent)] shrink-0" />
-                  {item}
-                </div>
-              ))}
-            </div>
+      <aside className="hidden lg:flex lg:w-72 xl:w-80 bg-[color:var(--color-fintech-dark)] relative overflow-hidden flex-col p-10 h-screen sticky top-0 border-r border-white/5">
+
+        {/* Logo */}
+        <div className="mb-10">
+          <Image
+            src="/logos/logo-compare-ta-banque.png"
+            alt="CompareTaBanque"
+            width={160} height={50}
+            className="h-9 w-auto object-contain cursor-pointer opacity-90 hover:opacity-100 transition-opacity"
+            onClick={() => router.push('/')}
+          />
+        </div>
+
+        {/* IA badge */}
+        <div className="flex items-center gap-3 mb-10 px-4 py-3 rounded-2xl bg-white/5 border border-white/10">
+          <div className="bg-[color:var(--color-fintech-accent)] p-2 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Zap size={18} className="text-white" />
           </div>
+          <div>
+            <p className="text-white font-black text-sm">Matching IA v2.0</p>
+            <p className="text-blue-300 text-[10px] font-bold uppercase tracking-widest">Actif</p>
+          </div>
+        </div>
+
+        {/* Steps navigation */}
+        <div className="flex-1 space-y-2">
+          {STEPS.map(step => {
+            const isActive   = activeStep === step.num;
+            const isComplete = activeStep > step.num;
+            return (
+              <button
+                key={step.num}
+                type="button"
+                onClick={() => scrollToStep(step.num)}
+                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all text-left group ${
+                  isActive
+                    ? 'bg-[color:var(--color-fintech-accent)] shadow-lg shadow-green-900/30'
+                    : isComplete
+                      ? 'bg-white/8 hover:bg-white/12'
+                      : 'bg-white/4 hover:bg-white/8'
+                }`}
+              >
+                {/* Step number / check */}
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-sm transition-all ${
+                  isActive   ? 'bg-white text-[color:var(--color-fintech-accent)]' :
+                  isComplete ? 'bg-[color:var(--color-fintech-accent)] text-white' :
+                               'bg-white/10 text-white/40'
+                }`}>
+                  {isComplete ? <CheckCircle2 size={16} /> : step.num}
+                </div>
+                <div>
+                  <p className={`font-black text-sm transition-all ${
+                    isActive ? 'text-white' : isComplete ? 'text-blue-200' : 'text-white/40'
+                  }`}>
+                    {step.label}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bottom features */}
+        <div className="mt-8 space-y-2.5 border-t border-white/10 pt-8">
+          {[
+            'Profil évalué en temps réel',
+            'Grilles tarifaires officielles',
+            'Score CPL automatique',
+            'Top 3 banques personnalisé',
+          ].map(item => (
+            <div key={item} className="flex items-center gap-2.5 text-[11px] text-blue-200/60 font-bold">
+              <CheckCircle2 size={12} className="text-[color:var(--color-fintech-accent)] shrink-0" />
+              {item}
+            </div>
+          ))}
         </div>
       </aside>
 
       {/* ── Formulaire ──────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto bg-slate-50 py-12 px-6 md:px-16">
-        <div className="max-w-4xl mx-auto">
+      <div className="flex-1 flex flex-col min-h-screen">
 
-          <div className="text-center mb-16">
-            <Image src="/logos/logo-compare-ta-banque.png" alt="Logo" width={200} height={80}
-              className="h-20 w-auto mx-auto mb-8 cursor-pointer hover:scale-105 transition-all"
-              onClick={() => router.push('/')} />
-            <h1 className="text-4xl md:text-6xl font-black text-slate-900 mb-3 tracking-tighter">
-              Évaluation Intelligente.
-            </h1>
-            <p className="text-slate-500 font-bold max-w-sm mx-auto leading-relaxed">
-              Précisez votre profil pour un matching et un scoring précis.
-            </p>
+        {/* ── Barre de progression sticky ─────────────────── */}
+        <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-sm">
+          <div className="max-w-4xl mx-auto px-6 md:px-16 py-3 flex items-center gap-4">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 shrink-0">
+              Étape {activeStep}/{STEPS.length}
+            </span>
+            <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div
+                className="h-full bg-[color:var(--color-fintech-accent)] rounded-full transition-all duration-500"
+                style={{ width: `${Math.max(10, progressPct)}%` }}
+              />
+            </div>
+            <span className="text-[10px] font-black text-[color:var(--color-fintech-accent)] shrink-0 hidden sm:block">
+              {STEPS[activeStep - 1]?.short}
+            </span>
           </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-12 pb-24">
+        {/* ── Contenu du formulaire ────────────────────────── */}
+        <div className="flex-1 overflow-y-auto bg-slate-50 py-12 px-6 md:px-16">
+          <div className="max-w-4xl mx-auto">
 
-            {/* ═══ SECTION 1 — Structure & Profil ═══════════════ */}
-            <Section title="Structure & Profil" icon={<Activity size={24} />} color="bg-blue-50 text-blue-600">
+            {/* Hero header */}
+            <div className="text-center mb-14">
+              <Image
+                src="/logos/logo-compare-ta-banque.png"
+                alt="Logo" width={200} height={80}
+                className="h-16 w-auto mx-auto mb-8 cursor-pointer hover:scale-105 transition-all lg:hidden"
+                onClick={() => router.push('/')}
+              />
+              <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-3 tracking-tighter">
+                Évaluation Intelligente.
+              </h1>
+              <p className="text-slate-500 font-bold max-w-sm mx-auto leading-relaxed mb-10">
+                Complétez votre profil pour un matching bancaire précis et personnalisé.
+              </p>
 
-              {/* Toggle principal */}
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
-                Nature du Demandeur
-              </label>
-              <div className="flex bg-slate-100 p-2 rounded-3xl mb-10">
-                <ToggleBtn
-                  active={!isPME} label="Particulier / Indépendant"
-                  onClick={() => set('company_type', 'individual')}
-                  icon={<User size={18} />}
-                />
-                <ToggleBtn
-                  active={isPME} label="PME / Entreprise"
-                  onClick={() => set('company_type', 'PME')}
-                  icon={<Building2 size={18} />}
-                />
+              {/* Trust badges */}
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <TrustBadge icon={<Shield size={14} />} label="100% Sécurisé" />
+                <TrustBadge icon={<CheckCircle2 size={14} />} label="Recommandations objectives" />
+                <TrustBadge icon={<Building2 size={14} />} label="Banques locales africaines" />
               </div>
-
-              {/* ── Particulier ──────────────────────────────── */}
-              {!isPME && (
-                <div className="space-y-8 [animation:var(--animate-fadeIn)]">
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
-                      Statut Professionnel
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {STATUTS_PARTICULIER.map(s => (
-                        <button key={s.value} type="button"
-                          onClick={() => set('statut', s.value)}
-                          className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left ${
-                            formData.statut === s.value
-                              ? 'border-[color:var(--color-fintech-blue)] bg-blue-50'
-                              : 'border-slate-100 bg-white hover:border-slate-300'
-                          }`}>
-                          <div className={`p-2 rounded-xl ${formData.statut === s.value ? 'bg-[color:var(--color-fintech-blue)] text-white' : 'bg-slate-100 text-slate-400'}`}>
-                            {s.icon}
-                          </div>
-                          <div>
-                            <p className={`text-sm font-black ${formData.statut === s.value ? 'text-[color:var(--color-fintech-blue)]' : 'text-slate-700'}`}>
-                              {s.label}
-                            </p>
-                            <p className="text-[10px] text-slate-400 font-bold">{s.sub}</p>
-                          </div>
-                          {formData.statut === s.value && (
-                            <CheckCircle2 size={18} className="ml-auto text-[color:var(--color-fintech-blue)] shrink-0" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Fonctionnaire → Corps */}
-                  {formData.statut === 'fonctionnaire' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-blue-50 rounded-3xl border border-blue-100 [animation:var(--animate-fadeIn)]">
-                      <div>
-                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                          Corps / Administration
-                        </label>
-                        <select name="corps_fonction" value={formData.corps_fonction} onChange={handleChange}
-                          className="w-full p-4 bg-white border-2 border-blue-100 rounded-2xl font-bold text-slate-800">
-                          <option value="">— Sélectionner —</option>
-                          {CORPS_FONCTION.map(c => (
-                            <option key={c.value} value={c.value}>{c.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                          Ancienneté dans la Fonction
-                        </label>
-                        <select name="anciennete_emploi" value={formData.anciennete_emploi} onChange={handleChange}
-                          className="w-full p-4 bg-white border-2 border-blue-100 rounded-2xl font-bold text-slate-800">
-                          <option value="<1">Moins d'1 an</option>
-                          <option value="1-3">1 – 3 ans</option>
-                          <option value="3-7">3 – 7 ans</option>
-                          <option value="7-15">7 – 15 ans</option>
-                          <option value="15+">Plus de 15 ans</option>
-                        </select>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Salarié privé → Secteur + Ancienneté */}
-                  {formData.statut === 'salarié_privé' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 rounded-3xl border border-slate-100 [animation:var(--animate-fadeIn)]">
-                      <div>
-                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                          Secteur d'Activité de l'Employeur
-                        </label>
-                        <select name="secteur_salarie" value={formData.secteur_salarie} onChange={handleChange}
-                          className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
-                          {SECTEURS.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                          Ancienneté dans l'Entreprise
-                        </label>
-                        <select name="anciennete_emploi" value={formData.anciennete_emploi} onChange={handleChange}
-                          className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
-                          <option value="<1">Moins d'1 an</option>
-                          <option value="1-3">1 – 3 ans</option>
-                          <option value="3-7">3 – 7 ans</option>
-                          <option value="7+">Plus de 7 ans</option>
-                        </select>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Indépendant / Libéral → Secteur */}
-                  {(formData.statut === 'indépendant' || formData.statut === 'profession_libérale') && (
-                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 [animation:var(--animate-fadeIn)]">
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                        Domaine d'Activité
-                      </label>
-                      <select name="secteur_activite" value={formData.secteur_activite} onChange={handleChange}
-                        className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
-                        {SECTEURS.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── PME / Entreprise ─────────────────────────── */}
-              {isPME && (
-                <div className="space-y-8 [animation:var(--animate-fadeIn)]">
-
-                  {/* Type d'entreprise */}
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
-                      Type d'Entreprise
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {TYPES_PME.map(t => (
-                        <button key={t.value} type="button"
-                          onClick={() => set('type_pme', t.value)}
-                          className={`flex items-center gap-3 p-5 rounded-2xl border-2 transition-all text-left ${
-                            formData.type_pme === t.value
-                              ? 'border-[color:var(--color-fintech-blue)] bg-blue-50'
-                              : 'border-slate-100 bg-white hover:border-slate-300'
-                          }`}>
-                          <div className={`p-2 rounded-xl ${formData.type_pme === t.value ? 'bg-[color:var(--color-fintech-blue)] text-white' : 'bg-slate-100 text-slate-400'}`}>
-                            {t.icon}
-                          </div>
-                          <div>
-                            <p className={`font-black text-sm ${formData.type_pme === t.value ? 'text-[color:var(--color-fintech-blue)]' : 'text-slate-700'}`}>
-                              {t.label}
-                            </p>
-                            <p className="text-[10px] text-slate-400">{t.sub}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Structure juridique + Taille + Ancienneté */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                        Forme Juridique
-                      </label>
-                      <select name="legal_type" value={formData.legal_type} onChange={handleChange}
-                        className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
-                        <option value="SARL">SARL</option>
-                        <option value="SA">SA</option>
-                        <option value="SUARL">SUARL</option>
-                        <option value="EI">Entreprise Individuelle</option>
-                        <option value="SNC">SNC</option>
-                        <option value="SAS">SAS</option>
-                        <option value="Asso">Association / ONG</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                        Effectif (Employés)
-                      </label>
-                      <select name="taille_entreprise" value={formData.taille_entreprise} onChange={handleChange}
-                        className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
-                        <option value="1-5">1 – 5</option>
-                        <option value="6-10">6 – 10</option>
-                        <option value="11-50">11 – 50</option>
-                        <option value="51-200">51 – 200</option>
-                        <option value="200+">Plus de 200</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                        Ancienneté
-                      </label>
-                      <select name="anciennete_entreprise" value={formData.anciennete_entreprise} onChange={handleChange}
-                        className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
-                        <option value="<1">Moins d'1 an</option>
-                        <option value="1-3">1 – 3 ans</option>
-                        <option value="3-7">3 – 7 ans</option>
-                        <option value="7+">Plus de 7 ans</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Secteur d'activité */}
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                      Secteur d'Activité
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                      {SECTEURS.map(s => (
-                        <button key={s} type="button"
-                          onClick={() => set('secteur_activite', s)}
-                          className={`px-3 py-2.5 rounded-xl text-[11px] font-black border-2 transition-all text-left ${
-                            formData.secteur_activite === s
-                              ? 'border-[color:var(--color-fintech-blue)] bg-blue-50 text-[color:var(--color-fintech-blue)]'
-                              : 'border-slate-100 bg-white text-slate-500 hover:border-slate-300'
-                          }`}>
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </Section>
-
-            {/* ═══ SECTION 2 — Finances & Intention ════════════ */}
-            <Section title="Finances & Intention" icon={<Wallet size={24} />} color="bg-green-50 text-green-600">
-              <div className="mb-10">
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6 italic">
-                  Souhaitez-vous un financement (crédit) ?
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <SelectionCard
-                    active={formData.needs_credit === 'yes'}
-                    onClick={() => set('needs_credit', 'yes')}
-                    icon={<TrendingUp size={24} />}
-                    label="Oui, j'ai un projet" sub="Inclure le scoring crédit"
-                  />
-                  <SelectionCard
-                    active={formData.needs_credit === 'no'}
-                    onClick={() => {
-                      set('needs_credit', 'no');
-                      set('montant_demande', '0');
-                      setTimeout(() => qualiteSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-                    }}
-                    icon={<PieChart size={24} />}
-                    label="Pas pour le moment" sub="Comparer frais & services"
-                    accentColor
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <FormInput
-                  label={isPME ? "Chiffre d'Affaires Annuel (FCFA)" : 'Revenu Mensuel Net (FCFA)'}
-                  name={isPME ? 'chiffre_affaires' : 'monthly_income'}
-                  value={isPME ? formData.chiffre_affaires : formData.monthly_income}
-                  onChange={handleChange} type="number" placeholder="Ex: 500000" required
-                />
-                {formData.needs_credit === 'yes' && (
-                  <>
-                    <FormInput
-                      label="Montant souhaité (FCFA)" name="montant_demande"
-                      value={formData.montant_demande} onChange={handleChange}
-                      type="number" placeholder="Ex: 5000000"
-                    />
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                        Type de Crédit
-                      </label>
-                      <select name="type_credit" value={formData.type_credit} onChange={handleChange}
-                        className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl font-black text-slate-800">
-                        <option value="consommation">Crédit Consommation</option>
-                        <option value="immobilier">Crédit Immobilier</option>
-                        <option value="investissement">Investissement / Équipement</option>
-                        <option value="tresorerie">Trésorerie / Fonds de roulement</option>
-                      </select>
-                    </div>
-                  </>
-                )}
-              </div>
-            </Section>
-
-            {/* ═══ SECTION 3 — Qualité & Préparation ══════════ */}
-            <div ref={qualiteSectionRef}>
-              <Section title="Qualité & Préparation du Dossier" icon={<ShieldCheck size={24} />} color="bg-purple-50 text-purple-600">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                  <RangeInput
-                    label={isPME ? "Structuration de l'entreprise / dossier" : "Niveau d'organisation personnelle"}
-                    name="niveau_structuration" value={formData.niveau_structuration}
-                    onChange={handleChange} min="1" max="5"
-                    left="Très Informel" right="Audit Certifié"
-                  />
-                  <RangeInput
-                    label="Besoin d'Autonomie Digitale"
-                    name="besoin_autonomie" value={formData.besoin_autonomie}
-                    onChange={handleChange} min="1" max="5"
-                    left="Besoin Agence" right="100% Mobile"
-                  />
-                </div>
-                {isPME && (
-                  <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-purple-50/50 rounded-3xl border border-purple-100">
-                    <label className="col-span-full block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      Partenariats & Dispositifs Publics
-                    </label>
-                    {[
-                      { name: 'partenariat_sgpme', label: 'Partenaire SGPME', sub: 'Société de Gestion et Financement des PME' },
-                      { name: 'partenariat_ifc',   label: 'Partenaire IFC',   sub: 'International Finance Corporation' },
-                    ].map(p => (
-                      <label key={p.name} className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                        (formData as unknown as Record<string, unknown>)[p.name]
-                          ? 'border-purple-400 bg-purple-50'
-                          : 'border-slate-100 bg-white hover:border-purple-200'
-                      }`}>
-                        <input type="checkbox" name={p.name} checked={!!(formData as unknown as Record<string, unknown>)[p.name]}
-                          onChange={handleChange} className="mt-1 w-5 h-5 accent-purple-600" />
-                        <div>
-                          <p className="font-black text-sm text-slate-800">{p.label}</p>
-                          <p className="text-[10px] text-slate-400 font-bold">{p.sub}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </Section>
             </div>
 
-            {/* ═══ SECTION 4 — Contact ═════════════════════════ */}
-            <Section title="Finalisation & Contact" icon={<Handshake size={24} />} color="bg-orange-50 text-orange-600">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <FormInput label="Nom Complet" name="full_name" value={formData.full_name} onChange={handleChange} placeholder="Ex: Jean Luc Koné" />
-                <FormInput label="Email" name="email" value={formData.email} onChange={handleChange} type="email" placeholder="jean@mail.com" />
-                <FormInput label="Téléphone" name="phone" value={formData.phone} onChange={handleChange} type="tel" placeholder="07 00 00 00 00" />
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Pays</label>
-                  <select
-                    name="pays"
-                    value={formData.pays}
-                    onChange={e => setFormData(prev => ({ ...prev, pays: e.target.value }))}
-                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl font-black text-slate-800 focus:border-[color:var(--color-fintech-blue)] focus:bg-white outline-none transition-all"
-                  >
-                    {PAYS_UEMOA.map(p => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-10 pb-24">
 
-              <div className="mt-12">
-                {/* Champs manquants */}
-                {!isFormValid && !isSubmitting && (
-                  <div className="mb-6 bg-orange-50 border border-orange-200 rounded-3xl px-6 py-4 flex flex-wrap gap-2 items-center">
-                    <span className="text-orange-700 font-black text-xs uppercase tracking-widest shrink-0">Champs requis :</span>
-                    {missingFields.map(f => (
-                      <span key={f} className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">{f}</span>
-                    ))}
+              {/* ═══ SECTION 1 — Structure & Profil ═══════════ */}
+              <div ref={sectionRefs[0]}>
+                <Section title="Structure & Profil" stepNum={1} icon={<Activity size={22} />} color="bg-blue-50 text-blue-600">
+
+                  {/* Toggle principal */}
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
+                    Nature du Demandeur
+                  </label>
+                  <div className="flex bg-slate-100 p-2 rounded-3xl mb-10">
+                    <ToggleBtn
+                      active={!isPME} label="Particulier / Indépendant"
+                      onClick={() => set('company_type', 'individual')}
+                      icon={<User size={18} />}
+                    />
+                    <ToggleBtn
+                      active={isPME} label="PME / Entreprise"
+                      onClick={() => set('company_type', 'PME')}
+                      icon={<Building2 size={18} />}
+                    />
                   </div>
-                )}
-                <button type="submit" disabled={isSubmitting || !isFormValid}
-                  className={`w-full py-8 rounded-[3rem] font-black text-2xl shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-4 group ${
-                    isFormValid && !isSubmitting
-                      ? 'bg-slate-900 text-white hover:bg-[color:var(--color-fintech-blue)] cursor-pointer'
-                      : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-70'
-                  }`}>
-                  {isSubmitting
-                    ? 'Calcul du matching IA...'
-                    : <>Lancer le Scoring IA v2.0 <ChevronRight className="group-hover:translate-x-3 transition-all" size={32} /></>
-                  }
-                </button>
-                <p className="text-center text-[10px] font-black uppercase text-slate-400 tracking-widest mt-8 flex items-center justify-center gap-2">
-                  <ShieldCheck size={14} className="text-[color:var(--color-fintech-accent)]" />
-                  Conforme aux standards BCEAO
-                </p>
-              </div>
-            </Section>
 
-          </form>
+                  {/* ── Particulier ──────────────────────────── */}
+                  {!isPME && (
+                    <div className="space-y-8 [animation:var(--animate-fadeIn)]">
+                      <div>
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
+                          Statut Professionnel
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {STATUTS_PARTICULIER.map(s => (
+                            <button key={s.value} type="button"
+                              onClick={() => set('statut', s.value)}
+                              className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left ${
+                                formData.statut === s.value
+                                  ? 'border-[color:var(--color-fintech-blue)] bg-blue-50'
+                                  : 'border-slate-100 bg-white hover:border-slate-300'
+                              }`}>
+                              <div className={`p-2 rounded-xl ${formData.statut === s.value ? 'bg-[color:var(--color-fintech-blue)] text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                {s.icon}
+                              </div>
+                              <div>
+                                <p className={`text-sm font-black ${formData.statut === s.value ? 'text-[color:var(--color-fintech-blue)]' : 'text-slate-700'}`}>
+                                  {s.label}
+                                </p>
+                                <p className="text-[10px] text-slate-400 font-bold">{s.sub}</p>
+                              </div>
+                              {formData.statut === s.value && (
+                                <CheckCircle2 size={18} className="ml-auto text-[color:var(--color-fintech-blue)] shrink-0" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Fonctionnaire → Corps */}
+                      {formData.statut === 'fonctionnaire' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-blue-50 rounded-3xl border border-blue-100 [animation:var(--animate-fadeIn)]">
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                              Corps / Administration
+                            </label>
+                            <select name="corps_fonction" value={formData.corps_fonction} onChange={handleChange}
+                              className="w-full p-4 bg-white border-2 border-blue-100 rounded-2xl font-bold text-slate-800">
+                              <option value="">— Sélectionner —</option>
+                              {CORPS_FONCTION.map(c => (
+                                <option key={c.value} value={c.value}>{c.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                              Ancienneté dans la Fonction
+                            </label>
+                            <select name="anciennete_emploi" value={formData.anciennete_emploi} onChange={handleChange}
+                              className="w-full p-4 bg-white border-2 border-blue-100 rounded-2xl font-bold text-slate-800">
+                              <option value="<1">Moins d&apos;1 an</option>
+                              <option value="1-3">1 – 3 ans</option>
+                              <option value="3-7">3 – 7 ans</option>
+                              <option value="7-15">7 – 15 ans</option>
+                              <option value="15+">Plus de 15 ans</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Salarié privé → Secteur + Ancienneté */}
+                      {formData.statut === 'salarié_privé' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 rounded-3xl border border-slate-100 [animation:var(--animate-fadeIn)]">
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                              Secteur d&apos;Activité de l&apos;Employeur
+                            </label>
+                            <select name="secteur_salarie" value={formData.secteur_salarie} onChange={handleChange}
+                              className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
+                              {SECTEURS.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                              Ancienneté dans l&apos;Entreprise
+                            </label>
+                            <select name="anciennete_emploi" value={formData.anciennete_emploi} onChange={handleChange}
+                              className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
+                              <option value="<1">Moins d&apos;1 an</option>
+                              <option value="1-3">1 – 3 ans</option>
+                              <option value="3-7">3 – 7 ans</option>
+                              <option value="7+">Plus de 7 ans</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Indépendant / Libéral → Secteur */}
+                      {(formData.statut === 'indépendant' || formData.statut === 'profession_libérale') && (
+                        <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 [animation:var(--animate-fadeIn)]">
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                            Domaine d&apos;Activité
+                          </label>
+                          <select name="secteur_activite" value={formData.secteur_activite} onChange={handleChange}
+                            className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
+                            {SECTEURS.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── PME / Entreprise ─────────────────────── */}
+                  {isPME && (
+                    <div className="space-y-8 [animation:var(--animate-fadeIn)]">
+
+                      {/* Type d'entreprise */}
+                      <div>
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
+                          Type d&apos;Entreprise
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {TYPES_PME.map(t => (
+                            <button key={t.value} type="button"
+                              onClick={() => set('type_pme', t.value)}
+                              className={`flex items-center gap-3 p-5 rounded-2xl border-2 transition-all text-left ${
+                                formData.type_pme === t.value
+                                  ? 'border-[color:var(--color-fintech-blue)] bg-blue-50'
+                                  : 'border-slate-100 bg-white hover:border-slate-300'
+                              }`}>
+                              <div className={`p-2 rounded-xl ${formData.type_pme === t.value ? 'bg-[color:var(--color-fintech-blue)] text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                {t.icon}
+                              </div>
+                              <div>
+                                <p className={`font-black text-sm ${formData.type_pme === t.value ? 'text-[color:var(--color-fintech-blue)]' : 'text-slate-700'}`}>
+                                  {t.label}
+                                </p>
+                                <p className="text-[10px] text-slate-400">{t.sub}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Structure juridique + Taille + Ancienneté */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                        <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                            Forme Juridique
+                          </label>
+                          <select name="legal_type" value={formData.legal_type} onChange={handleChange}
+                            className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
+                            <option value="SARL">SARL</option>
+                            <option value="SA">SA</option>
+                            <option value="SUARL">SUARL</option>
+                            <option value="EI">Entreprise Individuelle</option>
+                            <option value="SNC">SNC</option>
+                            <option value="SAS">SAS</option>
+                            <option value="Asso">Association / ONG</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                            Effectif (Employés)
+                          </label>
+                          <select name="taille_entreprise" value={formData.taille_entreprise} onChange={handleChange}
+                            className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
+                            <option value="1-5">1 – 5</option>
+                            <option value="6-10">6 – 10</option>
+                            <option value="11-50">11 – 50</option>
+                            <option value="51-200">51 – 200</option>
+                            <option value="200+">Plus de 200</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                            Ancienneté
+                          </label>
+                          <select name="anciennete_entreprise" value={formData.anciennete_entreprise} onChange={handleChange}
+                            className="w-full p-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-800">
+                            <option value="<1">Moins d&apos;1 an</option>
+                            <option value="1-3">1 – 3 ans</option>
+                            <option value="3-7">3 – 7 ans</option>
+                            <option value="7+">Plus de 7 ans</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Secteur d'activité */}
+                      <div>
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                          Secteur d&apos;Activité
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                          {SECTEURS.map(s => (
+                            <button key={s} type="button"
+                              onClick={() => set('secteur_activite', s)}
+                              className={`px-3 py-2.5 rounded-xl text-[11px] font-black border-2 transition-all text-left ${
+                                formData.secteur_activite === s
+                                  ? 'border-[color:var(--color-fintech-blue)] bg-blue-50 text-[color:var(--color-fintech-blue)]'
+                                  : 'border-slate-100 bg-white text-slate-500 hover:border-slate-300'
+                              }`}>
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </Section>
+              </div>
+
+              {/* ═══ SECTION 2 — Finances & Intention ══════════ */}
+              <div ref={sectionRefs[1]}>
+                <Section title="Finances & Intention" stepNum={2} icon={<Wallet size={22} />} color="bg-green-50 text-green-600">
+                  <div className="mb-10">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6 italic">
+                      Souhaitez-vous un financement (crédit) ?
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <SelectionCard
+                        active={formData.needs_credit === 'yes'}
+                        onClick={() => set('needs_credit', 'yes')}
+                        icon={<TrendingUp size={24} />}
+                        label="Oui, j'ai un projet" sub="Inclure le scoring crédit"
+                      />
+                      <SelectionCard
+                        active={formData.needs_credit === 'no'}
+                        onClick={() => {
+                          set('needs_credit', 'no');
+                          set('montant_demande', '0');
+                          setTimeout(() => qualiteSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                        }}
+                        icon={<PieChart size={24} />}
+                        label="Pas pour le moment" sub="Comparer frais & services"
+                        accentColor
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <FormInput
+                      label={isPME ? "Chiffre d'Affaires Annuel (FCFA)" : 'Revenu Mensuel Net (FCFA)'}
+                      name={isPME ? 'chiffre_affaires' : 'monthly_income'}
+                      value={isPME ? formData.chiffre_affaires : formData.monthly_income}
+                      onChange={handleChange} type="number" placeholder="Ex: 500000" required
+                    />
+                    {formData.needs_credit === 'yes' && (
+                      <>
+                        <FormInput
+                          label="Montant souhaité (FCFA)" name="montant_demande"
+                          value={formData.montant_demande} onChange={handleChange}
+                          type="number" placeholder="Ex: 5000000"
+                        />
+                        <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                            Type de Crédit
+                          </label>
+                          <select name="type_credit" value={formData.type_credit} onChange={handleChange}
+                            className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl font-black text-slate-800">
+                            <option value="consommation">Crédit Consommation</option>
+                            <option value="immobilier">Crédit Immobilier</option>
+                            <option value="investissement">Investissement / Équipement</option>
+                            <option value="tresorerie">Trésorerie / Fonds de roulement</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </Section>
+              </div>
+
+              {/* ═══ SECTION 3 — Qualité & Préparation ════════ */}
+              <div ref={sectionRefs[2]}>
+                <Section title="Qualité & Préparation du Dossier" stepNum={3} icon={<ShieldCheck size={22} />} color="bg-purple-50 text-purple-600">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <RangeInput
+                      label={isPME ? "Structuration de l'entreprise / dossier" : "Niveau d'organisation personnelle"}
+                      name="niveau_structuration" value={formData.niveau_structuration}
+                      onChange={handleChange} min="1" max="5"
+                      left="Très Informel" right="Audit Certifié"
+                    />
+                    <RangeInput
+                      label="Besoin d'Autonomie Digitale"
+                      name="besoin_autonomie" value={formData.besoin_autonomie}
+                      onChange={handleChange} min="1" max="5"
+                      left="Besoin Agence" right="100% Mobile"
+                    />
+                  </div>
+                  {isPME && (
+                    <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-purple-50/50 rounded-3xl border border-purple-100">
+                      <label className="col-span-full block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Dispositifs Publics d&apos;Appui
+                      </label>
+                      {[
+                        { name: 'partenariat_sgpme', label: 'Éligible SGPME', sub: 'Société de Gestion et Financement des PME' },
+                        { name: 'partenariat_ifc',   label: 'Éligible IFC',   sub: 'International Finance Corporation' },
+                      ].map(p => (
+                        <label key={p.name} className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                          (formData as unknown as Record<string, unknown>)[p.name]
+                            ? 'border-purple-400 bg-purple-50'
+                            : 'border-slate-100 bg-white hover:border-purple-200'
+                        }`}>
+                          <input type="checkbox" name={p.name} checked={!!(formData as unknown as Record<string, unknown>)[p.name]}
+                            onChange={handleChange} className="mt-1 w-5 h-5 accent-purple-600" />
+                          <div>
+                            <p className="font-black text-sm text-slate-800">{p.label}</p>
+                            <p className="text-[10px] text-slate-400 font-bold">{p.sub}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </Section>
+              </div>
+
+              {/* ═══ SECTION 4 — Contact ══════════════════════ */}
+              <div ref={sectionRefs[3]}>
+                <Section title="Finalisation & Contact" stepNum={4} icon={<Handshake size={22} />} color="bg-orange-50 text-orange-600">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <FormInput label="Nom Complet" name="full_name" value={formData.full_name} onChange={handleChange} placeholder="Ex: Jean Luc Koné" />
+                    <FormInput label="Email" name="email" value={formData.email} onChange={handleChange} type="email" placeholder="jean@mail.com" />
+                    <FormInput label="Téléphone" name="phone" value={formData.phone} onChange={handleChange} type="tel" placeholder="07 00 00 00 00" />
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Pays</label>
+                      <select
+                        name="pays"
+                        value={formData.pays}
+                        onChange={e => setFormData(prev => ({ ...prev, pays: e.target.value }))}
+                        className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl font-black text-slate-800 focus:border-[color:var(--color-fintech-blue)] focus:bg-white outline-none transition-all"
+                      >
+                        {PAYS_UEMOA.map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-12">
+                    {/* Champs manquants */}
+                    {!isFormValid && !isSubmitting && (
+                      <div className="mb-6 bg-orange-50 border border-orange-200 rounded-3xl px-6 py-4 flex flex-wrap gap-2 items-center">
+                        <span className="text-orange-700 font-black text-xs uppercase tracking-widest shrink-0">Champs requis :</span>
+                        {missingFields.map(f => (
+                          <span key={f} className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">{f}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* CTA button */}
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !isFormValid}
+                      className={`w-full py-7 rounded-[3rem] font-black text-xl shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-4 group ${
+                        isFormValid && !isSubmitting
+                          ? 'bg-[color:var(--color-fintech-accent)] text-white hover:brightness-110 cursor-pointer shadow-green-900/20'
+                          : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-70'
+                      }`}
+                    >
+                      {isSubmitting
+                        ? <>
+                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                            </svg>
+                            Calcul du matching IA…
+                          </>
+                        : <>
+                            Lancer le Scoring IA v2.0
+                            <ChevronRight className="group-hover:translate-x-2 transition-all" size={26} />
+                          </>
+                      }
+                    </button>
+
+                    {/* Security note */}
+                    <div className="mt-5 flex items-center justify-center gap-2 text-[11px] font-bold text-slate-400">
+                      <Lock size={12} className="text-[color:var(--color-fintech-accent)]" />
+                      Aucune donnée ne sera partagée sans votre consentement · Conforme BCEAO
+                    </div>
+                  </div>
+                </Section>
+              </div>
+
+            </form>
+          </div>
         </div>
       </div>
     </div>
@@ -629,14 +772,26 @@ export default function ProspectFormPage() {
 
 /* ── Sous-composants ─────────────────────────────────────────── */
 
-function Section({ title, icon, color, children }: {
-  title: string; icon: React.ReactNode; color: string; children: React.ReactNode;
+function TrustBadge({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-2 shadow-sm">
+      <span className="text-[color:var(--color-fintech-accent)]">{icon}</span>
+      <span className="text-[11px] font-black text-slate-600 uppercase tracking-wide">{label}</span>
+    </div>
+  );
+}
+
+function Section({ title, stepNum, icon, color, children }: {
+  title: string; stepNum: number; icon: React.ReactNode; color: string; children: React.ReactNode;
 }) {
   return (
-    <section className="bg-white p-8 md:p-12 rounded-[4rem] shadow-2xl shadow-slate-200/50 border border-slate-100 [animation:var(--animate-fadeIn)]">
+    <section className="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl shadow-slate-200/50 border border-slate-100 [animation:var(--animate-fadeIn)]">
       <div className="flex items-center gap-4 mb-10">
         <div className={`${color} p-3 rounded-2xl`}>{icon}</div>
-        <h3 className="text-[12px] font-black uppercase text-slate-800 tracking-[0.4em]">{title}</h3>
+        <div>
+          <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Étape {stepNum}</p>
+          <h3 className="text-[13px] font-black uppercase text-slate-800 tracking-[0.3em]">{title}</h3>
+        </div>
       </div>
       {children}
     </section>

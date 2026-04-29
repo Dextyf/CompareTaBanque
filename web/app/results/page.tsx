@@ -689,24 +689,46 @@ function BankCard({
 
         {/* Métriques */}
         <div className="grid grid-cols-2 gap-4 mb-10">
+          {/* Box 1 : frais mensuels (no credit) | taux prévisionnel (credit) */}
           <MetricSmall
             label={noCredit ? 'Frais Mensuels' : 'Taux Prévisionnel'}
-            value={noCredit ? (rec.fees_detail.split(': ')[1] ?? '0 F') : `${rec.taux_estime}%`}
+            value={
+              noCredit
+                ? (rec.monthlyFee > 0
+                    ? `${rec.monthlyFee.toLocaleString('fr-FR')} F/mois`
+                    : 'Gratuit')
+                : `${rec.taux_estime}%`
+            }
             icon={noCredit ? <Wallet size={14} /> : <Percent size={14} />}
           />
+          {/* Box 2 : taux épargne réel (no credit) | garantie requise (credit) */}
           <MetricSmall
             label={noCredit ? 'Taux Épargne' : 'Garantie Requise'}
-            value={noCredit ? '3.5% (Base)' : rec.garantie_requise}
+            value={
+              noCredit
+                ? (rec.savingsRate > 0 ? `${rec.savingsRate.toFixed(2)}%` : 'N/A')
+                : rec.garantie_requise
+            }
             icon={noCredit ? <Sparkles size={14} /> : <ShieldCheck size={14} />}
           />
-          <MetricSmall label="Levier Épargne" value={(rec as Record<string,unknown>).nv_ep as string ?? 'N/A'} icon={<TrendingUp size={14} />} />
-          <MetricSmall label="Indépendance"   value={rec.dependance_conseiller} icon={<Activity size={14} />} />
+          {/* Box 3 : probabilité accord / adéquation */}
+          <MetricSmall
+            label="Compatibilité"
+            value={rec.probabilite}
+            icon={<TrendingUp size={14} />}
+          />
+          {/* Box 4 : indépendance digitale */}
+          <MetricSmall label="Indépendance" value={rec.dependance_conseiller} icon={<Activity size={14} />} />
         </div>
 
         {/* VISA & frais */}
         <div className="grid grid-cols-1 gap-3 mb-10">
           <FeatureRow icon={<CreditCard size={20} className="text-purple-500" />} label="Plafond VISA / Mastercard" value={rec.visa_detail} />
-          <FeatureRow icon={<Wallet size={20} className="text-green-500" />} label="Coût de maintenance" value={rec.fees_detail} />
+          <FeatureRow
+            icon={<Wallet size={20} className="text-green-500" />}
+            label="Coût de maintenance"
+            value={rec.monthlyFee > 0 ? `${rec.monthlyFee.toLocaleString('fr-FR')} F/mois` : 'Compte Gratuit'}
+          />
         </div>
 
         {/* Avantages */}

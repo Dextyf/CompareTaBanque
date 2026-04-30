@@ -7,6 +7,8 @@ import Image from 'next/image';
 import { LayoutDashboard, Users, CreditCard, Lock, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
+const ADMIN_EMAILS = ['sakidesireluc@gmail.com', 'arriko199@gmail.com', 'jeanenockguikan@gmail.com'];
+
 const NAV = [
   { path: '/admin',              name: 'KPIs & Overview',     icon: <LayoutDashboard size={20} /> },
   { path: '/admin/leads',        name: 'Gestion des Leads',   icon: <Users size={20} /> },
@@ -21,15 +23,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setAdminEmail(session.user.email ?? null);
-      else router.push('/auth');
+      const email = session?.user?.email ?? null;
+      if (!email || !ADMIN_EMAILS.includes(email)) { router.push('/'); return; }
+      setAdminEmail(email);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (!session) router.push('/auth');
-      else setAdminEmail(session.user.email ?? null);
+      const email = session?.user?.email ?? null;
+      if (!email || !ADMIN_EMAILS.includes(email)) router.push('/');
+      else setAdminEmail(email);
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, []);// eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

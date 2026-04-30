@@ -10,17 +10,16 @@ interface Prospect {
   email?: string;
   phone?: string;
   consent_given?: boolean;
-  consent_status?: string;
   account_type?: string;
   needs_credit?: string;
   monthly_income?: number;
   created_at?: string;
 }
 
-const STATUS_BADGE: Record<string, React.ReactNode> = {
-  granted: <span className="bg-green-500/10 text-green-500 px-3 py-1 rounded-full text-xs font-bold border border-green-500/20">Consentement OK</span>,
-  pending: <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-xs font-bold border border-blue-500/20">En attente</span>,
-};
+const ConsentBadge = ({ given }: { given?: boolean }) =>
+  given
+    ? <span className="bg-green-500/10 text-green-500 px-3 py-1 rounded-full text-xs font-bold border border-green-500/20">Consentement OK</span>
+    : <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-xs font-bold border border-blue-500/20">En attente</span>;
 
 export default function LeadsManagerPage() {
   const supabase = createClient();
@@ -41,7 +40,10 @@ export default function LeadsManagerPage() {
   }, []);
 
   const filtered = prospects.filter(p => {
-    const matchStatus = filter === 'ALL' || p.consent_status === filter;
+    const matchStatus =
+      filter === 'ALL' ||
+      (filter === 'granted' && p.consent_given === true) ||
+      (filter === 'pending' && !p.consent_given);
     const q = search.toLowerCase();
     const matchSearch = !q ||
       p.full_name?.toLowerCase().includes(q) ||
@@ -126,11 +128,7 @@ export default function LeadsManagerPage() {
                     {p.monthly_income ? `${p.monthly_income.toLocaleString('fr-FR')} F` : '—'}
                   </td>
                   <td className="py-4 pr-4">
-                    {STATUS_BADGE[p.consent_status ?? ''] ?? (
-                      <span className="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-xs font-bold">
-                        {p.consent_status ?? 'N/A'}
-                      </span>
-                    )}
+                    <ConsentBadge given={p.consent_given} />
                   </td>
                   <td className="py-4 text-slate-500 text-xs">
                     {p.created_at ? new Date(p.created_at).toLocaleDateString('fr-FR') : '—'}

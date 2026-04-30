@@ -51,15 +51,19 @@ export default function RecommandationsPage() {
   };
 
   useEffect(() => {
-    supabase
-      .from('user_comparisons')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data) setComparisons(data as Comparison[]);
-        setLoading(false);
-      });
-  }, []);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) { setLoading(false); return; }
+      supabase
+        .from('user_comparisons')
+        .select('*')
+        .eq('auth_user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .then(({ data }) => {
+          if (data) setComparisons(data as Comparison[]);
+          setLoading(false);
+        });
+    });
+  }, []);// eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (

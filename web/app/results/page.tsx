@@ -682,7 +682,7 @@ function BankCard({
               <p>Accès: <b className="text-slate-700">{rec.scoreBreakdown.access}</b>/30</p>
               <p>Coût: <b className="text-slate-700">{rec.scoreBreakdown.cost}</b>/30</p>
               <p>Services: <b className="text-slate-700">{rec.scoreBreakdown.service}</b>/20</p>
-              <p>Confiance: <b className="text-slate-700">{rec.scoreBreakdown.trust}</b>/20</p>
+              <p>Solidité: <b className="text-slate-700">{rec.scoreBreakdown.trust}</b>/20</p>
             </div>
           </div>
         </div>

@@ -99,7 +99,7 @@ export default function Home() {
             </h1>
             <p className="text-base md:text-xl text-slate-400 max-w-2xl mx-auto lg:mx-0 font-medium">
               Comparez BNI, NSIA, SIB, SGBCI, Coris, BICICI, BDU, Bridge Bank et bien d&apos;autres banques en 2 minutes.
-              Notre IA identifie l&apos;offre imbattable pour votre profil parmi nos partenaires UEMOA.
+              Notre IA identifie l&apos;offre imbattable pour votre profil parmi les banques de la zone UEMOA.
             </p>
             <div className="flex justify-center lg:justify-start">
               <button
